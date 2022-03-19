@@ -51,8 +51,7 @@ interface Bot {
 
         val sendMessage = SendMessage()
         sendMessage.chatId = chatId.toString()
-        sendMessage.text = if(shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
-
+        sendMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         sendMessage.parseMode = "MarkdownV2"
 
         GlobalScope.launch (Dispatchers.Default) {

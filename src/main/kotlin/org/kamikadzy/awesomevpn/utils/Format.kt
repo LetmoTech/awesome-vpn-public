@@ -38,7 +38,6 @@ fun String.nonMarkdownShielded(): String = this
 private val HEX_CHARS = "0123456789ABCDEF"
 
 fun String.hexStringToByteArray() : ByteArray {
-
     val result = ByteArray(length / 2)
 
     for (i in 0 until length step 2) {

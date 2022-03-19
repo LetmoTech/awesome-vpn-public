@@ -1,33 +1,50 @@
 package org.kamikadzy.awesomevpn.bot
 
+import org.kamikadzy.awesomevpn.db.user.User
+import org.kamikadzy.awesomevpn.db.user.UserService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
-import javax.annotation.PostConstruct
 
 @Component
 class VpnBot(
     @Value("\${telegram.token}")
-    val token: String
+    val token: String,
+    val userService: UserService
 ): TelegramLongPollingBot(), Bot {
     companion object {
         const val ACHTUNG_MESSAGE = "Ошибка!"
     }
-    override fun getBotUsername() = "Awesome VPN Bot"
+
+    override fun getBotUsername(): String {
+        return "Awesome VPN Bot"
+    }
 
     override fun getBotToken() = token
     
     @Synchronized
     override fun onUpdateReceived(update: Update) {
         try {
-            val userName = if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
-            val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
-            val userChatId = if (update.hasCallbackQuery()) update.callbackQuery.message.chatId.toLong() else update.message.chatId.toLong()
+            val userName = update.message.from.userName
+            val userId = update.message.from.id
+            val userChatId = update.message.chatId.toLong()
 
-            if (userName in listOf("snitron", "minetik288", "kuratz")) {
-                processAdminUpdate(update, userId, userChatId)
+            var user = userService.getUserById(userId)
+
+            if (user == null) {
+                user = userService.saveUser(
+                        User(
+                                name = userName,
+                                chatId = userChatId,
+                                tgId = userId
+                        )
+                )
+            }
+
+            if (listOf("snitron", "minetik288", "kuratz").contains(userName)) {
+                processAdminUpdate(update, user)
             } else {
                 processUserUpdate(update)
             }
@@ -36,24 +53,26 @@ class VpnBot(
         }
     }
 
-    fun processAdminUpdate(update: Update, userId: Long, userChatId: Long) {
+    fun processAdminUpdate(update: Update, user: User) {
         if (update.hasMessage()) {
-            val message = update.message
+            val text = update.message
             val splittedMessage = update.message.text.split(" ")
 
             when (splittedMessage[0]) {
                 "/start" -> {
-                    sendMessage("Привет, странник!", userChatId, false)
+                    sendMessage("Привет, странник!", user.chatId, false)
                 }
 
                 "/cum" -> {
-                    sendMessage("Fucking slave!!!!", userChatId, false)
+                    sendMessage("Fucking slave!!!!", user.chatId, false)
                 }
 
-                else -> sendAchtung(userChatId)
+                "/hello" -> sendMessage("Привет, ${user.name}!", user.chatId, false)
+
+                else -> sendAchtung(user.chatId)
             }
         } else {
-            sendAchtung(userChatId)
+            sendAchtung(user.chatId)
         }
     }
 
