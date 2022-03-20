@@ -9,6 +9,7 @@ import javax.persistence.MappedSuperclass
 @MappedSuperclass
 abstract class BaseEntity<T> {
 
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: T? = null

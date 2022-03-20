@@ -4,10 +4,10 @@ import org.kamikadzy.awesomevpn.db.user.User
 import org.kamikadzy.awesomevpn.db.admin.Admin
 import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.db.admin.AdminService
+import org.kamikadzy.awesomevpn.db.user.DealSource
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
 
@@ -42,7 +42,8 @@ class VpnBot(
             var user = userService.getUserById(userId)
 
             var admin = adminService.getAdminById(userId)
-            val mbAdmin = adminService.getAdminByName(userName)
+            var mbAdmin : Admin? = null
+           if(userName != null) mbAdmin = adminService.getAdminByName(userName)
             if((mbAdmin != null) && (mbAdmin.tgId == (-1).toLong())) {
                 val admins = adminService.getAllAdmins()
                 for (i in 0 until admins.size) {
@@ -68,6 +69,8 @@ class VpnBot(
                 if(user.ban) return
                 processUserUpdate(update, user)
             } else {
+                user.name = userName
+                userService.saveUser(user)
                 if(user.ban) return
                 processUserUpdate(update, user)
             }
@@ -186,10 +189,14 @@ class VpnBot(
 
             when (splittedMessage[0]) {
                 "/start" -> {
-                    sendMessage("Здравствуйте, ${user.name}\n", user.chatId, false, listOf(
-                            "Ваш баланс" to "start!balance",
-                            "van" to "darkholm",
-                            Pair("baby", "boom")))
+                    val rr = sendMessage("Здравствуйте" + if(user.name != null) ", " + user.name + "." else "!" + "\n"
+                            , user.chatId, false, listOf(
+                            "Баланс" to "start!balance",
+                            "Мои криптокошельки" to "start!mycryptowallets"
+                    ))
+                    user.lastMessageType = 1
+                    if(rr != null) user.lastMessageId = rr.toLong()
+                    userService.saveUser(user)
                 }
 
                 else -> sendAchtung(user.chatId)
@@ -204,16 +211,35 @@ class VpnBot(
             }
             when(splittedCallBack[1]) {
                 "balance" -> {
-                    sendMessage("Ваш баланс составляет: `${user.balance}`₽", user.chatId, false, listOf(
+                    editMessageText("Ваш баланс составляет: `${user.balance}`₽", user.lastMessageId, user.chatId, false, listOf(
                             "Назад" to "balance!start",
-                            "Обновить" to "balance!balance"
+                    ))
+                }
+                "mycryptowallets" -> {
+                    /*user.tokens[DealSource.BTC] = "9999999999999999999999999"
+                    user.tokens[DealSource.ETH] = "8888888888888888888888888"
+                    user.tokens[DealSource.USDT] = "7777777777777777777777777"
+                    user.tokens[DealSource.TRON] = "6666666666666666666666666"
+                    user.tokens[DealSource.MONERO] = "55555555555555555555555555"
+                    userService.saveUser(user)
+                     */
+
+                    editMessageText("Ваши криптокошельки:\n\n" +
+                            "BTC:   `${user.tokens[DealSource.BTC]}`\n\n" +
+                            "ETH:   `${user.tokens[DealSource.ETH]}`\n\n" +
+                            "USDT:   `${user.tokens[DealSource.USDT]}`\n\n" +
+                            "TRON:   `${user.tokens[DealSource.TRON]}`\n\n" +
+                            "MONERO:   `${user.tokens[DealSource.MONERO]}`\n"
+                            , user.lastMessageId, user.chatId, false, listOf(
+                            "Назад" to "mycryptowallets!start",
                     ))
                 }
                 "start" -> {
-                    sendMessage("Здравствуйте, ${user.name}\n", user.chatId, false, listOf(
-                            "Ваш баланс" to "start!balance",
-                            "van" to "darkholm",
-                            Pair("baby", "boom")))
+                    editMessageText("Здравствуйте" + if(user.name != null) ", " + user.name + "." else "!" + "\n"
+                            , user.lastMessageId, user.chatId, false, listOf(
+                            "Баланс" to "start!balance",
+                            "Мои криптокошельки" to "start!mycryptowallets"
+                    ))
                 }
 
                 else -> sendAchtung(user.chatId)
@@ -222,6 +248,7 @@ class VpnBot(
         } else {
             sendAchtung(user.chatId)
         }
+
     }
     override fun <T: java.io.Serializable, Method : BotApiMethod<T>> execute(method: Method): T = super.execute(method)
 }

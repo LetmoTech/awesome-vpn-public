@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import org.kamikadzy.awesomevpn.utils.nonMarkdownShielded
 import org.kamikadzy.awesomevpn.utils.telegramShielded
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import java.io.File
@@ -19,6 +20,54 @@ interface Bot {
     fun  <T: java.io.Serializable, Method: BotApiMethod<T>> execute(method: Method): T
 
     fun execute(sendDocument: SendDocument): Message
+
+    fun editMessageText(text: String, messageId: Long, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
+        println("EDITING")
+        if (text.length > 4096) {
+            val splitted = text.split("\n")
+
+            var i = 0
+            var reducedText = ""
+
+            while (i in splitted.indices) {
+                while (i in splitted.indices && (reducedText + splitted[i] + "\n").length <= 4096) {
+                    reducedText += splitted[i] + "\n"
+                    i++
+                }
+
+                editMessageText(reducedText, messageId, chatId, shielded)
+
+                reducedText = ""
+            }
+
+            return
+        }
+
+
+        val editMessageText = EditMessageText()
+        editMessageText.messageId = messageId.toInt()
+        editMessageText.chatId = chatId.toString()
+        editMessageText.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
+        editMessageText.parseMode = "MarkdownV2"
+
+        if (buttons != null) {
+            val inlineKeyboardMarkup = InlineKeyboardMarkup()
+            inlineKeyboardMarkup.keyboard = makeKeyboard(buttons)
+            editMessageText.replyMarkup = inlineKeyboardMarkup
+        }
+
+        GlobalScope.launch (Dispatchers.Default) {
+            try {
+                execute(editMessageText)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sendAchtung(chatId)
+            }
+        }
+    }
+
+
+
 
     fun sendAchtung(chatId: Long) {
         GlobalScope.launch (Dispatchers.Default) {
@@ -30,7 +79,7 @@ interface Bot {
         }
     }
 
-    fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
+    fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null): Int? {
         println("SENDING")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -49,7 +98,7 @@ interface Bot {
                 reducedText = ""
             }
 
-            return
+            return -1
         }
 
 
@@ -64,15 +113,15 @@ interface Bot {
             sendMessage.replyMarkup = inlineKeyboardMarkup
         }
 
-        GlobalScope.launch (Dispatchers.Default) {
+        //GlobalScope.launch (Dispatchers.Default) {
             try {
-                execute(sendMessage)
+                return execute(sendMessage).messageId
             } catch (e: Exception) {
                 e.printStackTrace()
-
                 sendAchtung(chatId)
+                return -1
             }
-        }
+        //}
     }
 
     private fun makeKeyboard(buttonsInfo: List<Pair<String, String>>): List<List<InlineKeyboardButton>> {
