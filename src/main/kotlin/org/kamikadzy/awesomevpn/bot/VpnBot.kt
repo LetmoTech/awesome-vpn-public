@@ -40,6 +40,7 @@ class VpnBot(
             val userChatId = if (update.hasCallbackQuery()) update.callbackQuery.message.chatId else update.message.chatId.toLong()
 
             var user = userService.getUserById(userId)
+
             var admin = adminService.getAdminById(userId)
             val mbAdmin = adminService.getAdminByName(userName)
             if((mbAdmin != null) && (mbAdmin.tgId == (-1).toLong())) {
@@ -64,8 +65,10 @@ class VpnBot(
                                 tgId = userId
                         )
                 )
+                if(user.ban) return
                 processUserUpdate(update, user)
             } else {
+                if(user.ban) return
                 processUserUpdate(update, user)
             }
         } catch (e: Exception) {
@@ -90,14 +93,14 @@ class VpnBot(
                         val admins = adminService.getAllAdmins()
                         var adminsOut: String = "Admins:\n"
                         for (i in 0 until admins.size) {
-                            adminsOut += admins[i].name + " " + admins[i].tgId + "\n"
+                            adminsOut += "`" + admins[i].name + "` `" + admins[i].tgId + "`\n"
                         }
                         sendMessage(adminsOut, admin.chatId, false)
                     } else if(splittedMessage[1] in listOf("user", "users", "usr", "us")) {
                         val users = userService.getAllUsers()
                         var usersOut: String = "Users:\n"
                         for (i in 0 until users.size) {
-                            usersOut += users[i].name + " " + users[i].tgId + "\n"
+                            usersOut += "`" + users[i].name + "` `" + users[i].tgId + "`\n"
                         }
                         sendMessage(usersOut, admin.chatId, false)
                     } else {
@@ -117,7 +120,32 @@ class VpnBot(
                     }
                 }
                 "/ban" -> {
-
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: ban 'ID_USER'", admin.chatId, false)
+                        return
+                    }
+                    val banUser = userService.getUserById(splittedMessage[1].toLong())
+                    if(banUser != null) {
+                        banUser.ban = true
+                        sendMessage("User `${banUser.name}` with id `${banUser.tgId}` has been baned.", admin.chatId, false)
+                        userService.saveUser(banUser)
+                    } else {
+                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId, false)
+                    }
+                }
+                "/unban" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: unban 'ID_USER'", admin.chatId, false)
+                        return
+                    }
+                    val unbanUser = userService.getUserById(splittedMessage[1].toLong())
+                    if(unbanUser != null) {
+                        unbanUser.ban = false
+                        sendMessage("User `${unbanUser.name}` with id `${unbanUser.tgId}` has been unbaned.", admin.chatId, false)
+                        userService.saveUser(unbanUser)
+                    } else {
+                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId, false)
+                    }
                 }
                 "/remove" -> {
                     if(splittedMessage.size == 1) {
