@@ -1,7 +1,8 @@
-package org.kamikadzy.awesomevpn.db.user
+package org.kamikadzy.awesomevpn.db.admin
 
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
+import org.kamikadzy.awesomevpn.db.user.User
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import ru.agronum.ewcidshipping.model.BaseEntity
@@ -10,20 +11,20 @@ import javax.persistence.Entity
 import javax.persistence.Table
 
 @Repository
-interface UserRepository: CrudRepository<User, Long> {
-    fun findByTgId(tgId: Long): User?
+interface AdminRepository: CrudRepository<Admin, Long> {
+    fun findByTgId(tgId: Long): Admin?
+    fun findByName(name: String): Admin?
 }
 
 @DynamicInsert
 @DynamicUpdate
 @Entity
-@Table(name = "users")
-data class User (
+@Table(name = "admins")
+data class Admin(
         val name: String,
-        val chatId: Long,
-        val tgId: Long,
-        var lastMessageId: Long = (-1).toLong(),
-        var lastMessageType: Short = -1,
+        var chatId: Long,
+        var tgId: Long,
         val balance: BigDecimal = BigDecimal.ZERO,
         val vpnId: String = ""
-        ): BaseEntity<Long>()
+): BaseEntity<Long>() {
+}

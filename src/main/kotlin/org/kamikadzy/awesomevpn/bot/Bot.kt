@@ -10,6 +10,9 @@ import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.kamikadzy.awesomevpn.utils.nonMarkdownShielded
 import org.kamikadzy.awesomevpn.utils.telegramShielded
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import java.io.File
 
 interface Bot {
@@ -27,7 +30,7 @@ interface Bot {
         }
     }
 
-    fun sendMessage(text: String, chatId: Long, shielded: Boolean) {
+    fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
         println("SENDING")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -49,10 +52,17 @@ interface Bot {
             return
         }
 
+
         val sendMessage = SendMessage()
         sendMessage.chatId = chatId.toString()
         sendMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         sendMessage.parseMode = "MarkdownV2"
+
+        if (buttons != null) {
+            val inlineKeyboardMarkup = InlineKeyboardMarkup()
+            inlineKeyboardMarkup.keyboard = makeKeyboard(buttons)
+            sendMessage.replyMarkup = inlineKeyboardMarkup
+        }
 
         GlobalScope.launch (Dispatchers.Default) {
             try {
@@ -65,6 +75,30 @@ interface Bot {
         }
     }
 
+    private fun makeKeyboard(buttonsInfo: List<Pair<String, String>>): List<List<InlineKeyboardButton>> {
+        val keyboard = arrayListOf<List<InlineKeyboardButton>>()
+
+        var twoList = arrayListOf<InlineKeyboardButton>()
+        for ((name, code) in buttonsInfo) {
+            val button = InlineKeyboardButton()
+            button.text = name
+            button.callbackData = code
+
+            twoList.add(button)
+
+            if (twoList.size == 2) {
+                keyboard.add(twoList)
+                twoList = arrayListOf()
+            }
+        }
+
+        if (twoList.isNotEmpty()) {
+            keyboard.add(twoList)
+        }
+
+        return keyboard
+    }
+
     fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
@@ -75,6 +109,15 @@ interface Bot {
 
         GlobalScope.launch (Dispatchers.Default) {
             execute(sendDocument)
+        }
+    }
+
+    fun answerCallbackQuery(id: String) {
+        val answerCallbackQuery = AnswerCallbackQuery()
+        answerCallbackQuery.callbackQueryId = id
+
+        GlobalScope.launch (Dispatchers.Default) {
+            execute(answerCallbackQuery)
         }
     }
 }
