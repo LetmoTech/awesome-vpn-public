@@ -31,61 +31,86 @@ class VpnBot(
 
     override fun getBotToken() = token
 
-
+    /*
+     *
+     * Запуск бота с функции ниже
+     *
+     */
     @Synchronized
     override fun onUpdateReceived(update: Update) {
         try {
-            val userName = if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
-            val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
-            val userChatId = if (update.hasCallbackQuery()) update.callbackQuery.message.chatId else update.message.chatId.toLong()
-
-            var user = userService.getUserById(userId)
-
-            var admin = adminService.getAdminById(userId)
-            var mbAdmin : Admin? = null
-           if(userName != null) mbAdmin = adminService.getAdminByName(userName)
-            if((mbAdmin != null) && (mbAdmin.tgId == (-1).toLong())) {
-                val admins = adminService.getAllAdmins()
-                for (i in 0 until admins.size) {
-                    if(admins[i].chatId != (-1).toLong()) {
-                        sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId, false)
-                    }
-                }
-                mbAdmin.chatId = userChatId
-                mbAdmin.tgId = userId
-                admin = mbAdmin
-                adminService.saveAdmin(mbAdmin)
-            }
-            if(admin != null) {
-                processAdminUpdate(update, admin)
-            }else if (user == null) {
-                user = userService.saveUser(
-                        User(
-                                name = userName,
-                                chatId = userChatId,
-                                tgId = userId
-                        )
-                )
-                if(user.ban) return
-                processUserUpdate(update, user)
-            } else {
-                user.name = userName
-                userService.saveUser(user)
-                if(user.ban) return
-                processUserUpdate(update, user)
-            }
+            processUpdate(update)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
+    // Распределение юзеров/админов
+    private fun processUpdate(update: Update) {
+        val userName = if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
+        val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
+        val userChatId = if (update.hasCallbackQuery()) update.callbackQuery.message.chatId else update.message.chatId.toLong()
+
+        var user = userService.getUserById(userId)
+        updateNewAdmin(user)
+        val admin = adminService.getAdminById(userId)
+
+        if(admin != null && admin.asUser == false) {
+            processAdminUpdate(update, admin)
+        } else if (user == null) {
+            user = userService.saveUser(
+                    User(
+                            name = userName,
+                            chatId = userChatId,
+                            tgId = userId
+                    )
+            )
+            processUserUpdate(update, user)
+        } else {
+            user.name = userName
+            userService.saveUser(user)
+            if(user.ban) return
+            processUserUpdate(update, user)
+        }
+    }
+
+    //Фиксируем id нового админа
+    private fun updateNewAdmin(user: User?) {
+        if(user == null || user.name == null) return
+        val mbAdmin = adminService.getAdminByName(user.name!!)
+        if(mbAdmin != null && mbAdmin.tgId == (-1).toLong() && mbAdmin.chatId == (-1).toLong()) {
+            // Сообщаем о регистрации нового админа существующим админам
+            val admins = adminService.getAllAdmins()
+            for (i in 0 until admins.size) {
+                if(admins[i].chatId != (-1).toLong()) {
+                    sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId, false)
+                }
+            }
+            // Сохраняем нового админа в базе
+            mbAdmin.tgId = user.tgId
+            mbAdmin.chatId = user.chatId
+            adminService.saveAdmin(mbAdmin)
+        }
+    }
+
+    /*
+     * Команды
+     * админов
+     */
     fun processAdminUpdate(update: Update, admin: Admin) {
         if (update.hasMessage()) {
             val text = update.message
             val splittedMessage = update.message.text.split(" ")
             when (splittedMessage[0]) {
                 "/start" -> {
-                    sendMessage("Доброго времени суток, сударь ${admin.name}!", admin.chatId, false)
+                    sendMessage("Доброго времени суток, сударь ${admin.name}!", admin.chatId, false, listOf(
+                            "Список команд" to "commands"
+                    ))
+                }
+                "/asUser" -> {
+                    admin.asUser = true
+                    adminService.saveAdmin(admin)
+                    return
                 }
                 "/view" -> {
                     if(splittedMessage.size == 1) {
@@ -173,15 +198,37 @@ class VpnBot(
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
-
             val callbackData = update.callbackQuery.data
-
+            when(callbackData) {
+                "commands" -> {
+                    sendMessage("/view 'admins|users' - просмотр ников и tgId админов или юзеров'\n" +
+                            "/add 'NAME_ADMIN' - добавить админа по имени'\n" +
+                            "/remove 'NAME_ADMIN' - удалить админа по имени'\n" +
+                            "/ban 'ID_USER' - забанить юзера по tgId\n" +
+                            "/unban 'ID_USER' - разбанить юзера по tgId\n" +
+                            "/asUser - войти в систему как пользователь\n" +
+                            "/asAdminCum - войти в систему как админ, если в системе уже как пользователь\n",
+                    admin.chatId, false, listOf(
+                            "Назад" to "start"
+                    ))
+                }
+                "start" -> {
+                    sendMessage("Доброго времени суток, сударь ${admin.name}!", admin.chatId, false, listOf(
+                            "Список команд" to "commands"
+                    ))
+                }
+                else -> sendAchtung(admin.chatId)
+            }
             println(callbackData)
         } else {
             sendAchtung(admin.chatId)
         }
     }
 
+    /*
+     * Команды обычных
+     * пользователей
+     */
     fun processUserUpdate(update: Update, user: User) {
         if (update.hasMessage()) {
             val text = update.message
@@ -198,7 +245,14 @@ class VpnBot(
                     if(rr != null) user.lastMessageId = rr.toLong()
                     userService.saveUser(user)
                 }
-
+                "/asAdminCum" -> {
+                    val checkAdmin = adminService.getAdminById(user.tgId)
+                    if(checkAdmin != null) {
+                        checkAdmin.asUser = false
+                        adminService.saveAdmin(checkAdmin)
+                    }
+                    return
+                }
                 else -> sendAchtung(user.chatId)
             }
         } else if (update.hasCallbackQuery()) {
@@ -216,13 +270,6 @@ class VpnBot(
                     ))
                 }
                 "mycryptowallets" -> {
-                    /*user.tokens[DealSource.BTC] = "9999999999999999999999999"
-                    user.tokens[DealSource.ETH] = "8888888888888888888888888"
-                    user.tokens[DealSource.USDT] = "7777777777777777777777777"
-                    user.tokens[DealSource.TRON] = "6666666666666666666666666"
-                    user.tokens[DealSource.MONERO] = "55555555555555555555555555"
-                    userService.saveUser(user)
-                     */
 
                     editMessageText("Ваши криптокошельки:\n\n" +
                             "BTC:   `${user.tokens[DealSource.BTC]}`\n\n" +

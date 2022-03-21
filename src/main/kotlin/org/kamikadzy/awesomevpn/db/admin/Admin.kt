@@ -24,6 +24,7 @@ data class Admin(
         val name: String,
         var chatId: Long,
         var tgId: Long,
+        var asUser: Boolean = false,
         val balance: BigDecimal = BigDecimal.ZERO,
         val vpnId: String = ""
 ): BaseEntity<Long>() {
