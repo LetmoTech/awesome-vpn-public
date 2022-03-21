@@ -44,6 +44,15 @@ class VpnBot(
             e.printStackTrace()
         }
     }
+    // Создание криптокошельков нового пользователя
+    private fun newUserTokens(user: User) {
+        user.tokens[DealSource.BTC] = "Находится в разработке."
+        user.tokens[DealSource.ETH] = "Находится в разработке."
+        user.tokens[DealSource.USDT] = "Находится в разработке."
+        user.tokens[DealSource.TRON] = "Находится в разработке."
+        user.tokens[DealSource.MONERO] = "Находится в разработке."
+        userService.saveUser(user)
+    }
 
     // Распределение юзеров/админов
     private fun processUpdate(update: Update) {
@@ -65,6 +74,11 @@ class VpnBot(
                             tgId = userId
                     )
             )
+            sendMessage("Создаем вам криптокошельки.\n" +
+                    "Это происходит при регистрации нового пользователя и может занять некоторое время.\n", user.chatId, false)
+            newUserTokens(user)
+            sendMessage("Создание криптокошельков завершено.\n" +
+                    "Добро пожаловать!", user.chatId, false)
             processUserUpdate(update, user)
         } else {
             user.name = userName
