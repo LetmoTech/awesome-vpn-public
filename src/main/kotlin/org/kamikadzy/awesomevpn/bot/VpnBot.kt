@@ -44,6 +44,7 @@ class VpnBot(
             e.printStackTrace()
         }
     }
+
     // Создание криптокошельков нового пользователя
     private fun newUserTokens(user: User) {
         user.tokens[DealSource.BTC] = "Находится в разработке."
@@ -74,7 +75,7 @@ class VpnBot(
                             tgId = userId
                     )
             )
-            sendMessage("Создаем вам криптокошельки.\n" +
+            sendMessage("Создаем Вам криптокошельки.\n" +
                     "Это происходит при регистрации нового пользователя и может занять некоторое время.\n", user.chatId, false)
             newUserTokens(user)
             sendMessage("Создание криптокошельков завершено.\n" +
@@ -127,7 +128,7 @@ class VpnBot(
                     return
                 }
                 "/view" -> {
-                    if(splittedMessage.size == 1) {
+                    if(splittedMessage.size != 2) {
                         sendMessage("Usage: view 'admins|users'", admin.chatId, false)
                         return
                     }
@@ -150,7 +151,7 @@ class VpnBot(
                     }
                 }
                 "/add" -> {
-                    if(splittedMessage.size == 1) {
+                    if(splittedMessage.size != 2) {
                         sendMessage("Usage: add 'NAME_ADMIN'\nTry again", admin.chatId, false)
                         return
                     }
@@ -162,7 +163,7 @@ class VpnBot(
                     }
                 }
                 "/ban" -> {
-                    if(splittedMessage.size == 1) {
+                    if(splittedMessage.size != 2) {
                         sendMessage("Usage: ban 'ID_USER'", admin.chatId, false)
                         return
                     }
@@ -176,7 +177,7 @@ class VpnBot(
                     }
                 }
                 "/unban" -> {
-                    if(splittedMessage.size == 1) {
+                    if(splittedMessage.size != 2) {
                         sendMessage("Usage: unban 'ID_USER'", admin.chatId, false)
                         return
                     }
@@ -190,7 +191,7 @@ class VpnBot(
                     }
                 }
                 "/remove" -> {
-                    if(splittedMessage.size == 1) {
+                    if(splittedMessage.size != 2) {
                         sendMessage("Usage: remove 'NAME_ADMIN'\nTry again", admin.chatId, false)
                         return
                     }
