@@ -5,6 +5,7 @@ import org.kamikadzy.awesomevpn.db.admin.Admin
 import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.db.admin.AdminService
 import org.kamikadzy.awesomevpn.db.user.DealSource
+import org.kamikadzy.awesomevpn.utils.startSuspended
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -66,7 +67,7 @@ class VpnBot(
         val admin = adminService.getAdminById(userId)
 
         if(admin != null && !admin.asUser) {
-            processAdminUpdate(update, admin)
+            startSuspended { processAdminUpdate(update, admin) }
         } else if (user == null) {
             user = userService.saveUser(
                     User(
@@ -75,17 +76,19 @@ class VpnBot(
                             tgId = userId
                     )
             )
-            sendMessage("Создаем Вам криптокошельки.\n" +
-                    "Это происходит при регистрации нового пользователя и может занять некоторое время.\n", user.chatId, false)
-            newUserTokens(user)
-            sendMessage("Создание криптокошельков завершено.\n" +
-                    "Добро пожаловать!", user.chatId, false)
-            processUserUpdate(update, user)
+            startSuspended {
+                sendMessage("Создаем Вам криптокошельки.\n" +
+                        "Это происходит при регистрации нового пользователя и может занять некоторое время.\n", user.chatId, false)
+                newUserTokens(user)
+                sendMessage("Создание криптокошельков завершено.\n" +
+                        "Добро пожаловать!", user.chatId, false)
+                processUserUpdate(update, user)
+            }
         } else {
             user.name = userName
             userService.saveUser(user)
             if(user.ban) return
-            processUserUpdate(update, user)
+            startSuspended { processUserUpdate(update, user) }
         }
     }
 
@@ -98,7 +101,7 @@ class VpnBot(
             val admins = adminService.getAllAdmins()
             for (i in 0 until admins.size) {
                 if(admins[i].chatId != (-1).toLong()) {
-                    sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId, false)
+                    startSuspended { sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId, false) }
                 }
             }
             // Сохраняем нового админа в базе
@@ -112,7 +115,7 @@ class VpnBot(
      * Команды
      * админов
      */
-    fun processAdminUpdate(update: Update, admin: Admin) {
+    suspend fun processAdminUpdate(update: Update, admin: Admin) {
         if (update.hasMessage()) {
             val text = update.message
             val splittedMessage = update.message.text.split(" ")
@@ -244,7 +247,7 @@ class VpnBot(
      * Команды обычных
      * пользователей
      */
-    fun processUserUpdate(update: Update, user: User) {
+    suspend fun processUserUpdate(update: Update, user: User) {
         if (update.hasMessage()) {
             val text = update.message
             val splittedMessage = update.message.text.split(" ")

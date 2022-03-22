@@ -1,6 +1,8 @@
 package org.kamikadzy.awesomevpn.utils
 
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 suspend fun <T> retry(
         times: Int = Int.MAX_VALUE,
@@ -20,3 +22,5 @@ suspend fun <T> retry(
     }
     return block() // last attempt
 }
+
+fun startSuspended(unit: suspend () -> Any?) = GlobalScope.launch { unit.invoke() }

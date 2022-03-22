@@ -2,6 +2,7 @@ package org.kamikadzy.awesomevpn.bot
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
@@ -21,7 +22,7 @@ interface Bot {
 
     fun execute(sendDocument: SendDocument): Message
 
-    fun editMessageText(text: String, messageId: Long, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
+    suspend fun editMessageText(text: String, messageId: Long, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
         println("EDITING")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -56,13 +57,11 @@ interface Bot {
             editMessageText.replyMarkup = inlineKeyboardMarkup
         }
 
-        GlobalScope.launch (Dispatchers.Default) {
-            try {
-                execute(editMessageText)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                sendAchtung(chatId)
-            }
+        try {
+            execute(editMessageText)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            sendAchtung(chatId)
         }
     }
 
@@ -79,7 +78,7 @@ interface Bot {
         }
     }
 
-    fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null): Int? {
+    suspend fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null): Int? {
         println("SENDING")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -114,13 +113,18 @@ interface Bot {
         }
 
         //GlobalScope.launch (Dispatchers.Default) {
-            try {
-                return execute(sendMessage).messageId
+        return GlobalScope.async {
+            val id = try {
+                execute(sendMessage).messageId
             } catch (e: Exception) {
                 e.printStackTrace()
                 sendAchtung(chatId)
-                return -1
+
+                -1
             }
+
+             return@async id
+        }.await()
         //}
     }
 
@@ -131,8 +135,12 @@ interface Bot {
         for ((name, code) in buttonsInfo) {
             val button = InlineKeyboardButton()
             button.text = name
-            if(code.substring(0, 8) == "https://") button.url = code
-            else button.callbackData = code
+
+            if (code.substring(0, 8) == "https://") {
+                button.url = code
+            } else {
+                button.callbackData = code
+            }
 
             twoList.add(button)
 
@@ -149,7 +157,7 @@ interface Bot {
         return keyboard
     }
 
-    fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
+    suspend fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
         sendDocument.document = InputFile(document, document.name)
@@ -157,17 +165,13 @@ interface Bot {
 
         sendDocument.parseMode = "MarkdownV2"
 
-        GlobalScope.launch (Dispatchers.Default) {
-            execute(sendDocument)
-        }
+        execute(sendDocument)
     }
 
-    fun answerCallbackQuery(id: String) {
+    suspend fun answerCallbackQuery(id: String) {
         val answerCallbackQuery = AnswerCallbackQuery()
         answerCallbackQuery.callbackQueryId = id
 
-        GlobalScope.launch (Dispatchers.Default) {
-            execute(answerCallbackQuery)
-        }
+        execute(answerCallbackQuery)
     }
 }
