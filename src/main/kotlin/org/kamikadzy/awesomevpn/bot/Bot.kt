@@ -137,7 +137,7 @@ interface Bot {
             val button = InlineKeyboardButton()
             button.text = name
 
-            if (code.substring(0, 8) == "https://") {
+            if (code.length >= 8 && code.substring(0, 8) == "https://") {
                 button.url = code
             } else {
                 button.callbackData = code
