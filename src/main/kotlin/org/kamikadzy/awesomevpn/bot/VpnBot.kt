@@ -280,6 +280,7 @@ class VpnBot(
                 sendAchtung(user.chatId)
                 return
             }
+            if(update.callbackQuery.data == user.lastMessageType) return
             when(splittedCallBack[1]) {
                 "paybalance" -> {
                     editMessageText("Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
@@ -377,6 +378,8 @@ class VpnBot(
 
                 else -> sendAchtung(user.chatId)
             }
+            user.lastMessageType = update.callbackQuery.data
+            userService.saveUser(user)
             println(callbackData)
         } else {
             sendAchtung(user.chatId)
