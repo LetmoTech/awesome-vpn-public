@@ -65,7 +65,7 @@ class VpnBot(
         updateNewAdmin(user)
         val admin = adminService.getAdminById(userId)
 
-        if(admin != null && admin.asUser == false) {
+        if(admin != null && !admin.asUser) {
             processAdminUpdate(update, admin)
         } else if (user == null) {
             user = userService.saveUser(
@@ -91,7 +91,7 @@ class VpnBot(
 
     //Фиксируем id нового админа
     private fun updateNewAdmin(user: User?) {
-        if(user == null || user.name == null) return
+        if(user == null || user.name == null) return // эту строку не трогать, я сам не уверен как она работает...
         val mbAdmin = adminService.getAdminByName(user.name!!)
         if(mbAdmin != null && mbAdmin.tgId == (-1).toLong() && mbAdmin.chatId == (-1).toLong()) {
             // Сообщаем о регистрации нового админа существующим админам
@@ -254,9 +254,11 @@ class VpnBot(
                     val rr = sendMessage("Здравствуйте" + if(user.name != null) ", " + user.name + "." else "!" + "\n"
                             , user.chatId, false, listOf(
                             "Баланс" to "start!balance",
-                            "Мои криптокошельки" to "start!mycryptowallets"
+                            "Мои криптокошельки" to "start!mycryptowallets",
+                            "Пополнить баланс" to "start!paybalance",
+                            "Как подключить VPN" to "start!tutorial!1"
                     ))
-                    user.lastMessageType = 1
+                    user.lastMessageType = "start"
                     if(rr != null) user.lastMessageId = rr.toLong()
                     userService.saveUser(user)
                 }
@@ -279,13 +281,19 @@ class VpnBot(
                 return
             }
             when(splittedCallBack[1]) {
+                "paybalance" -> {
+                    editMessageText("Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
+                            user.lastMessageId, user.chatId, false, listOf(
+                            "Пополнить баланс" to "https://yoomoney.ru/",
+                            "Назад" to "paybalance!start"
+                    ))
+                }
                 "balance" -> {
                     editMessageText("Ваш баланс составляет: `${user.balance}`₽", user.lastMessageId, user.chatId, false, listOf(
                             "Назад" to "balance!start",
                     ))
                 }
                 "mycryptowallets" -> {
-
                     editMessageText("Ваши криптокошельки:\n\n" +
                             "BTC:   `${user.tokens[DealSource.BTC]}`\n\n" +
                             "ETH:   `${user.tokens[DealSource.ETH]}`\n\n" +
@@ -296,11 +304,74 @@ class VpnBot(
                             "Назад" to "mycryptowallets!start",
                     ))
                 }
+                "tutorial" -> {
+                    val page = splittedCallBack[2].toInt()
+                    val endTutorial = 3
+                    when (page) {
+                        endTutorial -> {
+                            editMessageText("${page}/${endTutorial}\n" +
+                                    "Для активации Вашего VPN" +
+                                    " нажмите на флажок в приложении и сверните приложение " +
+                                    "(главное не закрывать его полностью).\n\n" +
+                                    "Вот и всё! Ваш личный VPN настроен, " +
+                                    "Вы можете пользоваться любыми приложениями и не волноваться о Вашей безопасности.",
+                                    user.lastMessageId, user.chatId, true, listOf(
+                                    "Назад" to "tutorial!tutorial!${page - 1}",
+                                    "В меню" to "tutorial!start"
+                            ))
+                        }
+                        1 -> {
+                            editMessageText("${page}/${endTutorial}\n" +
+                                    "Скачайте приложение \'WireGuard\'.\n" +
+                                    "Его можно скачать, перейдя по кнопкам ниже.\n" +
+                                    "App Store - для iPhone.\n" +
+                                    "Play Маркет - для Android.\n" +
+                                    "И для других платформ(Windows, macOS, Linux).",
+                                    user.lastMessageId, user.chatId, true, listOf(
+                                    "Вперед" to "tutorial!tutorial!${page + 1}",
+                                    "В меню" to "tutorial!start",
+                                    "Play Маркет" to "https://play.google.com/store/apps/details?id=com.wireguard.android",
+                                    "App Store" to "https://apps.apple.com/us/app/wireguard/id1441195209",
+                                    "Для других платформ" to "https://www.wireguard.com/install/"
+                            ))
+                        }
+                        2 -> {
+                            editMessageText("${page}/${endTutorial}\n" +
+                                    "При регистрации вы получили уникальные zip файл и QR-код,\n" +
+                                    "они необходимы Вам для настройки VPN.\n" +
+                                    "Настройка происходит единожды.\n\n" +
+                                    "Следуйте шагам, показанным на фотографиях выше:\n" +
+                                    "1. Войдите в приложение WireGuard.\n" +
+                                    "2. Нажмите на плюсик.\n" +
+                                    "3. Выберите удобный Вам способ настройки\n" +
+                                    "   ('С помощью файла или архива' - используйте zip файл, выданный Вам ранее)\n" +
+                                    "   ('C помощью QR-кода' - наведите камеру на QR-код, выданный Вам ранее).\n" +
+                                    "4. Назовите VPN как Вам угодно.\n" +
+                                    "5. Если в приложении появилась строка с выбором VPN, значит настройка прошла успешно!\n" +
+                                    "Переходите на следующий шаг настройки.",
+                                    user.lastMessageId, user.chatId, true, listOf(
+                                    "Назад" to "tutorial!tutorial!${page - 1}",
+                                    "Вперед" to "tutorial!tutorial!${page + 1}",
+                                    "В меню" to "tutorial!start"
+                            ))
+                        }
+                        else -> {
+                            editMessageText("${page}/${endTutorial}\n",
+                                    user.lastMessageId, user.chatId, false, listOf(
+                                    "Назад" to "tutorial!tutorial!${page - 1}",
+                                    "Вперед" to "tutorial!tutorial!${page + 1}",
+                                    "В меню" to "tutorial!start"
+                            ))
+                        }
+                    }
+                }
                 "start" -> {
                     editMessageText("Здравствуйте" + if(user.name != null) ", " + user.name + "." else "!" + "\n"
                             , user.lastMessageId, user.chatId, false, listOf(
                             "Баланс" to "start!balance",
-                            "Мои криптокошельки" to "start!mycryptowallets"
+                            "Мои криптокошельки" to "start!mycryptowallets",
+                            "Пополнить баланс" to "start!paybalance",
+                            "Как подключить VPN" to "start!tutorial!1"
                     ))
                 }
 

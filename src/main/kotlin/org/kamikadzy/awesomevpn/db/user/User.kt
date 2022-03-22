@@ -23,7 +23,7 @@ data class User (
         val chatId: Long,
         val tgId: Long,
         var lastMessageId: Long = (-1).toLong(),
-        var lastMessageType: Short = -1,
+        var lastMessageType: String? = "start",
         var ban: Boolean = false,
         val balance: BigDecimal = BigDecimal.ZERO,
         val vpnId: String = "",
