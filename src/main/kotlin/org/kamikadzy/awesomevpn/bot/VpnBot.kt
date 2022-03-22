@@ -42,7 +42,7 @@ class VpnBot(
         try {
             processUpdate(update)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("Пропуск хода.")
         }
     }
 
@@ -238,8 +238,6 @@ class VpnBot(
                 else -> sendAchtung(admin.chatId)
             }
             println(callbackData)
-        } else {
-            sendAchtung(admin.chatId)
         }
     }
 
@@ -283,7 +281,6 @@ class VpnBot(
                 sendAchtung(user.chatId)
                 return
             }
-            if(update.callbackQuery.data == user.lastMessageType) return
             when(splittedCallBack[1]) {
                 "paybalance" -> {
                     editMessageText("Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
@@ -378,14 +375,8 @@ class VpnBot(
                             "Как подключить VPN" to "start!tutorial!1"
                     ))
                 }
-
-                else -> sendAchtung(user.chatId)
             }
-            user.lastMessageType = update.callbackQuery.data
-            userService.saveUser(user)
             println(callbackData)
-        } else {
-            sendAchtung(user.chatId)
         }
 
     }

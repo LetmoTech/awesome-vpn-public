@@ -61,7 +61,8 @@ interface Bot {
             execute(editMessageText)
         } catch (e: Exception) {
             e.printStackTrace()
-            sendAchtung(chatId)
+            //Не слать пользователю ахтунг
+            //sendAchtung(chatId)
         }
     }
 
