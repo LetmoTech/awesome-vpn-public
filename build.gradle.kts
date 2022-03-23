@@ -32,6 +32,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
 
     implementation("com.google.code.gson:gson:2.9.0")
+
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("ru.gildor.coroutines:kotlin-coroutines-okhttp:1.0")
 }
 
 tasks.withType<KotlinCompile> {
