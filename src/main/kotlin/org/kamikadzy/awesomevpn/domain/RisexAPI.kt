@@ -298,8 +298,6 @@ class RisexAPI(
     }*/
 
     fun addRequisite(requisite: String): Int {
-
-
         val request2 = Request.Builder()
             .url("$BASE_URL/offer/$advertisementId/requisite/")
             .post("""{"type": "card", "requisite":"$requisite", "auto_select": true}""".toRequestBody("application/json;charset=UTF-8".toMediaTypeOrNull()))
