@@ -12,6 +12,8 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import org.kamikadzy.awesomevpn.utils.nonMarkdownShielded
 import org.kamikadzy.awesomevpn.utils.telegramShielded
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto
+import org.telegram.telegrambots.meta.api.methods.send.SendSticker
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
@@ -20,7 +22,25 @@ import java.io.File
 interface Bot {
     fun  <T: java.io.Serializable, Method: BotApiMethod<T>> execute(method: Method): T
 
+    fun execute(sendSticker:  SendSticker): Message
     fun execute(sendDocument: SendDocument): Message
+    fun execute(sendPhoto: SendPhoto): Message
+
+    suspend fun sendSticker(sticker: String, chatId: Long) {
+        println("STICKER")
+        val sendSticker = SendSticker()
+        val str = org.telegram.telegrambots.meta.api.objects.InputFile()
+        str.setMedia(sticker)
+        sendSticker.chatId = chatId.toString()
+        sendSticker.sticker = str
+        try {
+            execute(sendSticker)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            //Не слать пользователю ахтунг
+            //sendAchtung(chatId)
+        }
+    }
 
     suspend fun editMessageText(text: String, messageId: Long, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
         println("EDITING")
@@ -61,7 +81,8 @@ interface Bot {
             execute(editMessageText)
         } catch (e: Exception) {
             e.printStackTrace()
-            sendAchtung(chatId)
+            //Не слать пользователю ахтунг
+            //sendAchtung(chatId)
         }
     }
 
@@ -79,7 +100,7 @@ interface Bot {
     }
 
     suspend fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null): Int? {
-        println("SENDING")
+        println("MESSAGE")
         if (text.length > 4096) {
             val splitted = text.split("\n")
 
@@ -136,7 +157,7 @@ interface Bot {
             val button = InlineKeyboardButton()
             button.text = name
 
-            if (code.substring(0, 8) == "https://") {
+            if (code.length >= 8 && code.substring(0, 8) == "https://") {
                 button.url = code
             } else {
                 button.callbackData = code
@@ -157,7 +178,24 @@ interface Bot {
         return keyboard
     }
 
+    suspend fun sendPhoto(photo: String, chatId: Long) {
+        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
+        println("PHOTO")
+        val sendPhoto = SendPhoto()
+        val t = InputFile()
+        t.setMedia(File("photoAndDocs\\$photo"))
+        sendPhoto.photo = t
+        sendPhoto.chatId = chatId.toString()
+        try {
+            execute(sendPhoto)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     suspend fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
+        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
+        println("DOCUMENT")
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
         sendDocument.document = InputFile(document, document.name)

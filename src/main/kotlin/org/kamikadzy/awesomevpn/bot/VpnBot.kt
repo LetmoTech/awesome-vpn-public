@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
+import java.io.File
 
 @Component
 class VpnBot(
@@ -42,7 +43,7 @@ class VpnBot(
         try {
             processUpdate(update)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("Пропуск хода.")
         }
     }
 
@@ -121,13 +122,15 @@ class VpnBot(
             val splittedMessage = update.message.text.split(" ")
             when (splittedMessage[0]) {
                 "/start" -> {
-                    sendMessage("Доброго времени суток, сударь ${admin.name}!", admin.chatId, false, listOf(
+                    sendSticker("CAACAgIAAxkBAAEEPlFiOmXSUUeV3-o1Na7NngNZ3KeRhwACxwAD-0HCDoWNjoqE3wv6IwQ", admin.chatId)
+                    sendMessage("Рады тебя видеть, ${admin.name}!", admin.chatId, false, listOf(
                             "Список команд" to "commands"
                     ))
                 }
                 "/asUser" -> {
                     admin.asUser = true
                     adminService.saveAdmin(admin)
+                    sendSticker("CAACAgIAAxkBAAEEPk1iOmRR9bwTKMY71SaVKnQuUocqVQACEBUAAjFLyEtoCinYPeRu6CME", admin.chatId)
                     return
                 }
                 "/view" -> {
@@ -238,8 +241,6 @@ class VpnBot(
                 else -> sendAchtung(admin.chatId)
             }
             println(callbackData)
-        } else {
-            sendAchtung(admin.chatId)
         }
     }
 
@@ -270,6 +271,8 @@ class VpnBot(
                     if(checkAdmin != null) {
                         checkAdmin.asUser = false
                         adminService.saveAdmin(checkAdmin)
+                        sendSticker("CAACAgIAAxkBAAEEPk9iOmRWF-V3YtvLNPdD7pi7bqV47AACWRIAAiyS0Ev9JSCrjYWUiCME",
+                            user.chatId)
                     }
                     return
                 }
@@ -283,7 +286,6 @@ class VpnBot(
                 sendAchtung(user.chatId)
                 return
             }
-            if(update.callbackQuery.data == user.lastMessageType) return
             when(splittedCallBack[1]) {
                 "paybalance" -> {
                     editMessageText("Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
@@ -378,14 +380,8 @@ class VpnBot(
                             "Как подключить VPN" to "start!tutorial!1"
                     ))
                 }
-
-                else -> sendAchtung(user.chatId)
             }
-            user.lastMessageType = update.callbackQuery.data
-            userService.saveUser(user)
             println(callbackData)
-        } else {
-            sendAchtung(user.chatId)
         }
 
     }
