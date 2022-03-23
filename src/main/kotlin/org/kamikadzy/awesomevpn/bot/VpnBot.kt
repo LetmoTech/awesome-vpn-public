@@ -2,16 +2,15 @@ package org.kamikadzy.awesomevpn.bot
 
 import org.kamikadzy.awesomevpn.db.user.User
 import org.kamikadzy.awesomevpn.db.admin.Admin
-import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.db.admin.AdminService
 import org.kamikadzy.awesomevpn.db.user.DealSource
+import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.utils.startSuspended
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
-import java.io.File
 
 @Component
 class VpnBot(

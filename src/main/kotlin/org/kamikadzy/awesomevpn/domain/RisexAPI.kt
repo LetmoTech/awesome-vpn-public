@@ -7,19 +7,13 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
-import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.utils.retry
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import ru.gildor.coroutines.okhttp.await
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
-import javax.annotation.PostConstruct
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * Legacy code
