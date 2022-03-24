@@ -25,8 +25,8 @@ data class User (
         var lastMessageId: Long = (-1).toLong(),
         var lastMessageType: String? = "start",
         var ban: Boolean = false,
+        var registrated: Boolean = false,
         val balance: BigDecimal = BigDecimal.ZERO,
-        val vpnId: String = "",
         @ElementCollection(fetch = FetchType.EAGER)
         @MapKeyColumn(name = "cards_with_daaz_tokens_key", length = 100000)
         @Column(name = "cards_with_daaz_tokens_val", length = 100000)

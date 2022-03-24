@@ -11,7 +11,17 @@ class UserService (
     fun getAllUsers(): ArrayList<User> {
         return userRepository.findAll() as ArrayList<User>
     }
+
     fun getUserById(id: Long): User? {
         return userRepository.findByTgId(id)
+    }
+
+    fun setRegistratedById(id: Long, registrated: Boolean) {
+        val user = userRepository.findByTgId(id)
+
+        user?.registrated = true
+        if (user != null) {
+            userRepository.save(user)
+        }
     }
 }

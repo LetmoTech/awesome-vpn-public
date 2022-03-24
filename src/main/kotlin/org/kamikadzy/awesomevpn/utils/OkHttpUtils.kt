@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import org.json.JSONObject
 import ru.gildor.coroutines.okhttp.await
 
@@ -21,7 +22,7 @@ object OkHttpUtils {
         request: Request,
         s: String = ""
     ): String? {
-        val call = client.newCall(request).await()
+        val call = makeAsyncRequestRaw(client, request)
         val string = withContext(Dispatchers.Default) { call.body!!.string() }
         call.body?.close()
         call.close()
@@ -32,6 +33,13 @@ object OkHttpUtils {
         )
 
         return if (call.code == 200) string else null
+    }
+
+    suspend fun makeAsyncRequestRaw(
+        client: OkHttpClient,
+        request: Request
+    ): Response {
+        return client.newCall(request).await()
     }
 
     fun makeRequest(client: OkHttpClient, request: Request): JSONObject? {

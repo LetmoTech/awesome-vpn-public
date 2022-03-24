@@ -35,6 +35,8 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("ru.gildor.coroutines:kotlin-coroutines-okhttp:1.0")
+
+    implementation("io.nayuki:qrcodegen:1.7.0")
 }
 
 tasks.withType<KotlinCompile> {
