@@ -69,7 +69,7 @@ class NetmakerAPI (
         }
     }
 
-    suspend fun getUserNamesList(): List<String> {
+    private suspend fun getUserNamesList(): List<String> {
         val request = Request.Builder()
             .url(apiUrl)
             .get()
@@ -90,6 +90,15 @@ class NetmakerAPI (
         }
 
         return userNames
+    }
+
+     suspend fun deleteUserByUsername(userName: String) {
+        val createRequest = Request.Builder()
+                .url("${apiUrl}/vpn/${userName}")
+                .delete("".toRequestBody())
+                .build()
+
+        OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
     }
 
     suspend fun changeUserValue(prevName: String, newName: String = prevName, enabled: Boolean = false) {
