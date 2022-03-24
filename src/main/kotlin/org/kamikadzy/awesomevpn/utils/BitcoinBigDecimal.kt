@@ -4,10 +4,10 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
 
-class BitcoinBigDecimal(s: String): BigDecimal(s) {
-    constructor(double: Double): this(double.toString())
-    constructor(long: Long): this(long.toString())
-    constructor(bigDecimal: BigDecimal): this(bigDecimal.toPlainString())
+class BitcoinBigDecimal(s: String) : BigDecimal(s) {
+    constructor(double: Double) : this(double.toString())
+    constructor(long: Long) : this(long.toString())
+    constructor(bigDecimal: BigDecimal) : this(bigDecimal.toPlainString())
 
     companion object {
         val mathContext = MathContext(8, RoundingMode.HALF_EVEN)

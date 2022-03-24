@@ -16,7 +16,10 @@ PUT https://api.nm.213-109-192-92.nip.io/api/extclients/vpn/billy-herrington
 Authorization: Bearer BBMfxj2OCTdXbTAiFb3fXIOIjyvuu5
 Content-Type: application/json
 
-{"clientid": "billy-herrington", "enabled": true}
+{
+  "clientid": "billy-herrington",
+  "enabled": true
+}
 
 
 ### Getting user's configuration

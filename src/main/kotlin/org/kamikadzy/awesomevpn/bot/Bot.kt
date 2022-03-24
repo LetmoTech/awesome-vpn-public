@@ -4,25 +4,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-import org.telegram.telegrambots.meta.api.objects.InputFile
-import org.telegram.telegrambots.meta.api.objects.Message
 import org.kamikadzy.awesomevpn.utils.nonMarkdownShielded
 import org.kamikadzy.awesomevpn.utils.telegramShielded
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto
 import org.telegram.telegrambots.meta.api.methods.send.SendSticker
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
+import org.telegram.telegrambots.meta.api.objects.InputFile
+import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import java.io.File
 
 interface Bot {
-    fun  <T: java.io.Serializable, Method: BotApiMethod<T>> execute(method: Method): T
+    fun <T : java.io.Serializable, Method : BotApiMethod<T>> execute(method: Method): T
 
-    fun execute(sendSticker:  SendSticker): Message
+    fun execute(sendSticker: SendSticker): Message
     fun execute(sendDocument: SendDocument): Message
     fun execute(sendPhoto: SendPhoto): Message
 
@@ -42,7 +42,13 @@ interface Bot {
         }
     }
 
-    suspend fun editMessageText(text: String, messageId: Long, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null) {
+    suspend fun editMessageText(
+        text: String,
+        messageId: Long,
+        chatId: Long,
+        shielded: Boolean,
+        buttons: List<Pair<String, String>>? = null
+    ) {
         println("EDITING")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -87,10 +93,8 @@ interface Bot {
     }
 
 
-
-
     fun sendAchtung(chatId: Long) {
-        GlobalScope.launch (Dispatchers.Default) {
+        GlobalScope.launch(Dispatchers.Default) {
             val sendMessage = SendMessage()
             sendMessage.chatId = chatId.toString()
             sendMessage.text = VpnBot.ACHTUNG_MESSAGE
@@ -99,7 +103,12 @@ interface Bot {
         }
     }
 
-    suspend fun sendMessage(text: String, chatId: Long, shielded: Boolean, buttons: List<Pair<String, String>>? = null): Int? {
+    suspend fun sendMessage(
+        text: String,
+        chatId: Long,
+        shielded: Boolean,
+        buttons: List<Pair<String, String>>? = null
+    ): Int? {
         println("MESSAGE")
         if (text.length > 4096) {
             val splitted = text.split("\n")
@@ -144,7 +153,7 @@ interface Bot {
                 -1
             }
 
-             return@async id
+            return@async id
         }.await()
         //}
     }
@@ -199,7 +208,8 @@ interface Bot {
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
         sendDocument.document = InputFile(document, document.name)
-        sendDocument.caption = if(markdownShielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
+        sendDocument.caption =
+            if (markdownShielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
 
         sendDocument.parseMode = "MarkdownV2"
 

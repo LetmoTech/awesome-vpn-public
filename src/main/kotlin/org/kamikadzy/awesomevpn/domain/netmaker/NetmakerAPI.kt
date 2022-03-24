@@ -10,9 +10,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
+import org.json.JSONObject
 import org.kamikadzy.awesomevpn.db.user.UserService
 import org.kamikadzy.awesomevpn.utils.OkHttpUtils
 import org.kamikadzy.awesomevpn.utils.QRGenerator
+import org.kamikadzy.awesomevpn.utils.kassert
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.File
@@ -22,13 +24,12 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.PostConstruct
 import javax.imageio.ImageIO
-import kotlin.collections.ArrayDeque
 import kotlin.io.path.createDirectory
 
 class NetmakerAPIException(s: String) : Exception(s)
 
 @Component
-class NetmakerAPI (
+class NetmakerAPI(
     @Value("\${netmaker.token}")
     val token: String,
     @Value("\${netmaker.api-url}")
@@ -37,13 +38,13 @@ class NetmakerAPI (
     val apiCreateUserUrl: String,
     val userService: UserService,
     val qrGenerator: QRGenerator
-        ) {
+) {
     private val httpClient = OkHttpClient.Builder()
-            .addNetworkInterceptor(TokenInterceptor())
-            .connectTimeout(Duration.ofMinutes(1))
-            .build()
-    private val requestsQueue: ArrayDeque<suspend () -> Unit> = Collections.synchronizedCollection(ArrayDeque<suspend () -> Unit>()) as ArrayDeque<suspend () -> Unit>
-    private var isCreatingUsers = AtomicBoolean()
+        .addNetworkInterceptor(TokenInterceptor())
+        .connectTimeout(Duration.ofMinutes(1))
+        .build()
+    private val requestsQueue = Collections.synchronizedList(LinkedList<suspend () -> Unit>())
+    private var isCreatingUsers = AtomicBoolean(false)
 
     private inner class TokenInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
@@ -75,10 +76,14 @@ class NetmakerAPI (
             .get()
             .build()
 
-        val response = OkHttpUtils.makeAsyncRequest(
+        var response = OkHttpUtils.makeAsyncRequest(
             client = httpClient,
             request = request
         ) ?: throw NetmakerAPIException("Bad code")
+
+        if (response.trim() == "null") {
+            response = "[]"
+        }
 
         val jsonArray = JSONArray(response)
         val userNames = arrayListOf<String>()
@@ -92,22 +97,36 @@ class NetmakerAPI (
         return userNames
     }
 
-     suspend fun deleteUserByUsername(userName: String) {
+    suspend fun deleteUser(tgId: Long) {
         val createRequest = Request.Builder()
-                .url("${apiUrl}/vpn/${userName}")
-                .delete("".toRequestBody())
-                .build()
+            .url("${apiUrl}/vpn/${tgId}")
+            .delete("".toRequestBody())
+            .build()
 
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
     }
 
-    suspend fun changeUserValue(prevName: String, newName: String = prevName, enabled: Boolean = false) {
+    suspend fun enableUser(tgId: Long) {
+        val json = JSONObject(changeUserValue(prevName = tgId.toString(), enabled = true))
+        userService.setActiveById(tgId, json.getBoolean("enabled"))
+    }
+
+    suspend fun disableUser(tgId: Long) {
+        val json = JSONObject(changeUserValue(prevName = tgId.toString(), enabled = false))
+        userService.setActiveById(tgId, json.getBoolean("enabled"))
+    }
+
+    private suspend fun changeUserValue(
+        prevName: String,
+        newName: String = prevName,
+        enabled: Boolean = false
+    ): String {
         val updateNameRequest = Request.Builder()
             .url("${apiUrl}/vpn/${prevName}")
-            .post("{\"clientid\": \"$newName\", \"enabled\": $enabled}".toRequestBody(OkHttpUtils.JSON_TYPE))
+            .put("{\"clientid\": \"$newName\", \"enabled\": $enabled}".toRequestBody(OkHttpUtils.JSON_TYPE))
             .build()
 
-        OkHttpUtils.makeAsyncRequest(httpClient, updateNameRequest) ?: throw NetmakerAPIException("Bad code")
+        return OkHttpUtils.makeAsyncRequest(httpClient, updateNameRequest) ?: throw NetmakerAPIException("Bad code")
     }
 
     private suspend fun createUserByAPI() {
@@ -119,7 +138,9 @@ class NetmakerAPI (
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
     }
 
-    suspend fun createUser(id: Long) {
+    suspend fun createUser(tgId: Long) {
+        kassert(!(userService.getUserByTgId(tgId)?.isRegistered ?: false), NetmakerAPIException("Already registered"))
+
         synchronized(requestsQueue) {
             requestsQueue.add {
                 val usersBefore = getUserNamesList().toSet()
@@ -127,7 +148,7 @@ class NetmakerAPI (
                 val usersAfter = getUserNamesList().toSet()
                 val userName = (usersAfter - usersBefore).first()
 
-                changeUserValue(userName, id.toString())
+                changeUserValue(userName, tgId.toString())
             }
         }
 
@@ -135,26 +156,30 @@ class NetmakerAPI (
             GlobalScope.launch {
                 isCreatingUsers.set(true)
 
-                while (requestsQueue.isEmpty()) {
-                    synchronized(requestsQueue) {
-                        requestsQueue.removeFirst()
-                    }.invoke()
+                while (requestsQueue.isNotEmpty()) {
+                    try {
+                        synchronized(requestsQueue) {
+                            requestsQueue.removeFirst()
+                        }.invoke()
 
-                    userService.setRegistratedById(id, true)
+                        userService.setRegisteredById(tgId, true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
 
-                isCreatingUsers.set(true)
+                isCreatingUsers.set(false)
             }
         }
     }
 
-    suspend fun getUserConf(id: Long): File {
-        val file = File("configs/${id}.conf")
+    suspend fun getUserConf(tgId: Long): File {
+        val file = File("configs/${tgId}.conf")
 
         if (!file.exists()) {
             withContext(Dispatchers.IO) { file.createNewFile() }
             val request = Request.Builder()
-                .url("${apiUrl}/vpn/${id}")
+                .url("${apiUrl}/vpn/${tgId}/file")
                 .get()
                 .build()
             val call = OkHttpUtils.makeAsyncRequestRaw(httpClient, request)
@@ -180,7 +205,7 @@ class NetmakerAPI (
                 }
 
                 withContext(Dispatchers.IO) {
-                    outputStream.write(buffer)
+                    outputStream.write(buffer, 0, read)
                 }
             }
 
@@ -196,12 +221,12 @@ class NetmakerAPI (
 
         return file
     }
-    
-    suspend fun getQrCode(id: Long): File {
-        val file = File("qrs/${id}.png")
+
+    suspend fun getQrCode(tgId: Long): File {
+        val file = File("qrs/${tgId}.png")
 
         if (!file.exists()) {
-            val config = getUserConf(id)
+            val config = getUserConf(tgId)
 
             withContext(Dispatchers.IO) {
                 ImageIO.write(qrGenerator.getCodeForConfig(config.readText()), "png", file)

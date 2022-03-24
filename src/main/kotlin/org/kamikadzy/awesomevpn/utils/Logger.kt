@@ -36,7 +36,8 @@ object Logger {
             file.appendText(
                 "${getDate()}\t${entity}\n"
             )
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     fun addDealEvent(entity: String) {
@@ -44,7 +45,8 @@ object Logger {
             file.appendText(
                 "${getDate()}\t${entity}\n"
             )
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     fun addHgBaseEvent(entity: String) {
@@ -55,7 +57,8 @@ object Logger {
             panelsLog.appendText(
                 "${getDate()}\t${entity}\n"
             )
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     fun addPanelsEvent(entity: String) {
@@ -63,7 +66,8 @@ object Logger {
             panelsLog.appendText(
                 "${getDate()}\t${entity}\n"
             )
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     private fun getDate(): String {

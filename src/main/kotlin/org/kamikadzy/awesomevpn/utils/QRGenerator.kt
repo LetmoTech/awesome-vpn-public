@@ -12,8 +12,14 @@ class QRGenerator {
         return toImage(qrCode)
     }
 
-    private fun toImage(qr: QrCode, scale: Int = 10, border: Int = 4, lightColor: Int = 0xFFFFFF, darkColor: Int = 0x000000): BufferedImage {
-         val result =
+    private fun toImage(
+        qr: QrCode,
+        scale: Int = 10,
+        border: Int = 4,
+        lightColor: Int = 0xFFFFFF,
+        darkColor: Int = 0x000000
+    ): BufferedImage {
+        val result =
             BufferedImage((qr.size + border * 2) * scale, (qr.size + border * 2) * scale, BufferedImage.TYPE_INT_RGB)
         for (y in 0 until result.height) {
             for (x in 0 until result.width) {

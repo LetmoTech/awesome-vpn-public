@@ -10,7 +10,7 @@ object DebugUtils {
     ) {
         if (debug) {
             val methodCalledFrom = try {
-                Thread.currentThread().stackTrace[12].methodName
+                Thread.currentThread().stackTrace[12].methodName + " " + Thread.currentThread().stackTrace[13].methodName
             } catch (e: Exception) {
                 ""
             }

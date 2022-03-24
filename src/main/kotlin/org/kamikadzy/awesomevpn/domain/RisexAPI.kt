@@ -9,7 +9,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import org.kamikadzy.awesomevpn.utils.retry
-import org.springframework.stereotype.Component
 import ru.gildor.coroutines.okhttp.await
 import java.text.SimpleDateFormat
 import java.time.Duration
@@ -18,11 +17,7 @@ import java.util.*
 /**
  * Legacy code
  */
-
-@Component
-class RisexWSAPI (
-    //val userService: UserService
-        ) {
+class RisexWSAPI {
     var gotUpdate: (suspend (JSONObject) -> Unit)? = null
     val okHttpClient = OkHttpClient.Builder().build()
 
@@ -98,13 +93,13 @@ class RisexAPI(
 
     private val httpClient = OkHttpProvider().httpClient.value
     private var advertisementId: Long = -1L
-    get() {
-        if (field == -1L) {
-            field = getAdvertisementID()
-        }
+        get() {
+            if (field == -1L) {
+                field = getAdvertisementID()
+            }
 
-        return field
-    }
+            return field
+        }
 
     companion object {
         const val MIN_BALANCE = 10000
@@ -124,7 +119,7 @@ class RisexAPI(
                 .build()
         }
 
-        inner class TokenInterceptor() : Interceptor {
+        inner class TokenInterceptor : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val newReq = chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer $token")
