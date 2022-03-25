@@ -86,7 +86,9 @@ interface Bot {
         try {
             execute(editMessageText)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println(e.message)
+            //Не выводить ошибки при редактировании сообщения
+            //e.printStackTrace()
             //Не слать пользователю ахтунг
             //sendAchtung(chatId)
         }
@@ -106,7 +108,7 @@ interface Bot {
     suspend fun sendMessage(
         text: String,
         chatId: Long,
-        shielded: Boolean,
+        shielded: Boolean = false,
         buttons: List<Pair<String, String>>? = null
     ): Int? {
         println("MESSAGE")
@@ -193,6 +195,21 @@ interface Bot {
         val sendPhoto = SendPhoto()
         val t = InputFile()
         t.setMedia(File("photoAndDocs\\$photo"))
+        sendPhoto.photo = t
+        sendPhoto.chatId = chatId.toString()
+        try {
+            execute(sendPhoto)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    suspend fun sendPhoto(photo: File, chatId: Long) {
+        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
+        println("PHOTO")
+        val sendPhoto = SendPhoto()
+        val t = InputFile()
+        t.setMedia(photo)
+        sendPhoto.caption
         sendPhoto.photo = t
         sendPhoto.chatId = chatId.toString()
         try {

@@ -5,6 +5,7 @@ import org.kamikadzy.awesomevpn.db.admin.AdminService
 import org.kamikadzy.awesomevpn.db.user.DealSource
 import org.kamikadzy.awesomevpn.db.user.User
 import org.kamikadzy.awesomevpn.db.user.UserService
+import org.kamikadzy.awesomevpn.domain.netmaker.NetmakerAPI
 import org.kamikadzy.awesomevpn.utils.startSuspended
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -17,11 +18,11 @@ class VpnBot(
     @Value("\${telegram.token}")
     val token: String,
     val userService: UserService,
-    val adminService: AdminService
+    val adminService: AdminService,
+    val netmakerAPI: NetmakerAPI
 ) : TelegramLongPollingBot(), Bot {
     companion object {
         const val ACHTUNG_MESSAGE = "Ошибка!"
-
         const val CHOOSE_BITCOIN_TEXT = "BTC"
         const val CHOOSE_BITCOIN = "CPM!BTC"
     }
@@ -40,7 +41,7 @@ class VpnBot(
     @Synchronized
     override fun onUpdateReceived(update: Update) {
         try {
-            processUpdate(update)
+            startSuspended { processUpdate(update) }
         } catch (e: Exception) {
             println("Пропуск хода.")
         }
@@ -57,7 +58,7 @@ class VpnBot(
     }
 
     // Распределение юзеров/админов
-    private fun processUpdate(update: Update) {
+    private suspend fun processUpdate(update: Update) {
         val userName =
             if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
         val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
@@ -78,6 +79,7 @@ class VpnBot(
                     tgId = userId
                 )
             )
+            netmakerAPI.createUser(user.tgId)
             startSuspended {
                 sendMessage(
                     "Создаем Вам криптокошельки.\n" +
@@ -271,7 +273,23 @@ class VpnBot(
     /*
      * Команды обычных
      * пользователей
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
      */
+    val startUserButton = listOf(
+        "Баланс" to "start!balance",
+        "Мои криптокошельки" to "start!mycryptowallets",
+        "Пополнить баланс" to "start!paybalance",
+        "Как подключить VPN" to "start!tutorial!1",
+        "Мои подключения" to "start!myconnect"
+    )
     suspend fun processUserUpdate(update: Update, user: User) {
         if (update.hasMessage()) {
             val text = update.message
@@ -283,12 +301,7 @@ class VpnBot(
                         "Здравствуйте" + if (user.name != null) ", " + user.name + "." else "!" + "\n",
                         user.chatId,
                         false,
-                        listOf(
-                            "Баланс" to "start!balance",
-                            "Мои криптокошельки" to "start!mycryptowallets",
-                            "Пополнить баланс" to "start!paybalance",
-                            "Как подключить VPN" to "start!tutorial!1"
-                        )
+                        startUserButton
                     )
                     user.lastMessageType = "start"
                     if (rr != null) user.lastMessageId = rr.toLong()
@@ -317,6 +330,20 @@ class VpnBot(
                 return
             }
             when (splittedCallBack[1]) {
+                "myconnect" -> {
+                    sendMessage("Ваши архив и QR-код для настройки VPN:", user.chatId, false)
+                    sendDocument(netmakerAPI.getUserConf(user.tgId), "", user.chatId)
+                    sendPhoto(netmakerAPI.getQrCode(user.tgId), user.chatId)
+                    val rr = sendMessage(
+                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else "!" + "\n",
+                        user.chatId,
+                        false,
+                        startUserButton
+                    )
+                    user.lastMessageType = "start"
+                    if (rr != null) user.lastMessageId = rr.toLong()
+                    userService.saveUser(user)
+                }
                 "paybalance" -> {
                     editMessageText(
                         "Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
@@ -389,6 +416,7 @@ class VpnBot(
                                 "${page}/${endTutorial}\n" +
                                         "При регистрации вы получили уникальные zip файл и QR-код,\n" +
                                         "они необходимы Вам для настройки VPN.\n" +
+                                        "Их можно получить в меню пройдя по кнопке 'Мои подключения'\n" +
                                         "Настройка происходит единожды.\n\n" +
                                         "Следуйте шагам, показанным на фотографиях выше:\n" +
                                         "1. Войдите в приложение WireGuard.\n" +
@@ -424,12 +452,7 @@ class VpnBot(
                         user.lastMessageId,
                         user.chatId,
                         false,
-                        listOf(
-                            "Баланс" to "start!balance",
-                            "Мои криптокошельки" to "start!mycryptowallets",
-                            "Пополнить баланс" to "start!paybalance",
-                            "Как подключить VPN" to "start!tutorial!1"
-                        )
+                        startUserButton
                     )
                 }
             }
