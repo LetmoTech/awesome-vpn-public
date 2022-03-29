@@ -23,7 +23,6 @@ data class User(
     val chatId: Long,
     val tgId: Long,
     var lastMessageId: Long = (-1).toLong(),
-    var lastMessageType: String? = "start",
     var isBan: Boolean = false,
     var isRegistered: Boolean = false,
     var isActive: Boolean = false,
