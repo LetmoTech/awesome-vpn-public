@@ -105,6 +105,18 @@ class NetmakerAPI(
 
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
         userService.setRegisteredById(tgId, false)
+
+        if (File("configs/$tgId.conf").exists()) {
+            withContext(Dispatchers.IO) {
+                File("configs/$tgId.conf").delete()
+            }
+        }
+
+        if (File("qrs/$tgId.png").exists()) {
+            withContext(Dispatchers.IO) {
+                File("qrs/$tgId.png").delete()
+            }
+        }
     }
 
     suspend fun enableUser(tgId: Long) {
