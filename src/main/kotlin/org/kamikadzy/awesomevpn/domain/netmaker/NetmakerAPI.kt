@@ -104,6 +104,7 @@ class NetmakerAPI(
             .build()
 
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
+        userService.setRegisteredById(tgId, false)
     }
 
     suspend fun enableUser(tgId: Long) {
