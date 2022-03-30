@@ -122,8 +122,10 @@ class VpnBot(
     }
 
     /*
-     * Команды
-     * админов
+     *
+     *  Команды
+     *  админов
+     *
      */
     suspend fun processAdminUpdate(update: Update, admin: Admin) {
         if (update.hasMessage()) {
@@ -151,46 +153,71 @@ class VpnBot(
                         sendMessage("Usage: notification 'ID_USER'. You can see tgId in /view users", admin.chatId)
                         return
                     }
-                    netmakerAPI.enableUser(splittedMessage[1].toLong())
-                    sendMessage("Команда 'enable' выполнена, работает-неработает я не ебу", admin.chatId)
+                    try {
+                        netmakerAPI.enableUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
                 }
                 "/deleteNet" -> {
                     if(splittedMessage.size == 1) {
                         sendMessage("Usage: deleteNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
                         return
                     }
-                    netmakerAPI.deleteUser(splittedMessage[1].toLong())
-                    sendMessage("Команда 'deleteNet' выполнена, работает-неработает я не ебу", admin.chatId)
+                    try {
+                        netmakerAPI.deleteUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
                 }
                 "/createNet" -> {
                     if(splittedMessage.size == 1) {
                         sendMessage("Usage: createNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
                         return
                     }
-                    netmakerAPI.createUser(splittedMessage[1].toLong())
-                    sendMessage("Команда 'createNet' выполнена, работает-неработает я не ебу", admin.chatId)
+                    try {
+                        netmakerAPI.createUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
                 }
                 "/rebornNet" -> {
                     if(splittedMessage.size == 1) {
                         sendMessage("Usage: rebornNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
                         return
                     }
-                    netmakerAPI.deleteUser(splittedMessage[1].toLong())
-                    netmakerAPI.createUser(splittedMessage[1].toLong())
-                    val usr = userService.getUserByTgId(splittedMessage[1].toLong())
-                    if(usr != null) {
-                        sendMessage("Ваши параметры конфигурации обновлены, настройте " +
-                                "Ваш VPN ещё раз с новыми файлами конфигурации. Их можно найти в 'Мои подключения'", usr.chatId)
+                    try{
+                        netmakerAPI.deleteUser(splittedMessage[1].toLong())
+                        netmakerAPI.createUser(splittedMessage[1].toLong())
+                        val usr = userService.getUserByTgId(splittedMessage[1].toLong())
+                        if(usr != null) {
+                            sendMessage("Ваши параметры конфигурации обновлены.\nНастройте " +
+                                    "Ваш VPN ещё раз с новыми файлами конфигурации. Их можно найти в 'Мои подключения'", usr.chatId)
+                        }
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
                     }
-                    sendMessage("Команда 'rebornNet' выполнена, работает-неработает я не ебу", admin.chatId)
                 }
                 "/disable" -> {
                     if(splittedMessage.size == 1) {
                         sendMessage("Usage: notification 'ID_USER'. You can see tgId in /view users", admin.chatId)
                         return
                     }
-                    netmakerAPI.disableUser(splittedMessage[1].toLong())
-                    sendMessage("Команда 'disable' выполнена, работает-неработает я не ебу", admin.chatId)
+                    try {
+                        netmakerAPI.disableUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
                 }
                 "/notification" -> {
                     if (splittedMessage.size == 1) {
@@ -290,7 +317,7 @@ class VpnBot(
                         sendMessage("Admin with name `${splittedMessage[1]}` not found.", admin.chatId)
                     }
                 }
-                else -> sendAchtung(admin.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", admin.chatId)
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
@@ -323,7 +350,7 @@ class VpnBot(
                         )
                     )
                 }
-                else -> sendAchtung(admin.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", admin.chatId)
             }
             println(callbackData)
         }
@@ -430,16 +457,12 @@ class VpnBot(
                     }
                     return
                 }
-                else -> sendAchtung(user.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", user.chatId)
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
             val callbackData = update.callbackQuery.data
             val splittedCallBack = callbackData.split("!")
-            if (splittedCallBack.size == 1) {
-                sendAchtung(user.chatId)
-                return
-            }
             when (splittedCallBack[1]) {
                 "tutorial" -> {
                     val page = splittedCallBack[2].toInt()

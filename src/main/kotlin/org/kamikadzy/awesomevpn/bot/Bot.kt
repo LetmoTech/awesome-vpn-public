@@ -30,9 +30,10 @@ interface Bot {
     fun execute(sendDocument: SendDocument): Message
     fun execute(sendPhoto: SendPhoto): Message
 
-
-    suspend fun sendSticker(sticker: String, chatId: Long) {
-        println("STICKER")
+    suspend fun sendSticker(
+        sticker: String,
+        chatId: Long
+    ) {
         val sendSticker = SendSticker()
         val str = InputFile()
         str.setMedia(sticker)
@@ -41,9 +42,10 @@ interface Bot {
         try {
             execute(sendSticker)
         } catch (e: Exception) {
-            e.printStackTrace()
-            //Не слать пользователю ахтунг
-            //sendAchtung(chatId)
+            println("#")
+            println("Ошибка при отправке стикера.")
+            println(e.message)
+            println("#")
         }
     }
 
@@ -54,28 +56,6 @@ interface Bot {
         inlineButtons: List<Pair<String, String>>? = null,
         shielded: Boolean = false
     ) {
-        println("EDITING")
-        /*if (text.length > 4096) {
-            val splitted = text.split("\n")
-
-            var i = 0
-            var reducedText = ""
-
-            while (i in splitted.indices) {
-                while (i in splitted.indices && (reducedText + splitted[i] + "\n").length <= 4096) {
-                    reducedText += splitted[i] + "\n"
-                    i++
-                }
-
-                editMessageText(reducedText, messageId, chatId, shielded)
-
-                reducedText = ""
-            }
-
-            return
-        }
-
-         */
         val editMessage = EditMessageText()
         editMessage.messageId = messageId.toInt()
         editMessage.chatId = chatId.toString()
@@ -86,21 +66,10 @@ interface Bot {
         try {
             execute(editMessage)
         } catch (e: Exception) {
+            println("#")
+            println("Ошибка при редактировании сообщения.")
             println(e.message)
-            //Не выводить ошибки при редактировании сообщения
-            //e.printStackTrace()
-            //Не слать пользователю ахтунг
-            //sendAchtung(chatId)
-        }
-    }
-
-
-    fun sendAchtung(chatId: Long) {
-        GlobalScope.launch(Dispatchers.Default) {
-            val sendMessage = SendMessage()
-            sendMessage.chatId = chatId.toString()
-            sendMessage.text = VpnBot.ACHTUNG_MESSAGE
-            execute(sendMessage)
+            println("#")
         }
     }
 
@@ -113,47 +82,26 @@ interface Bot {
         oneTime: Boolean = false
     ): Int? {
         // Приоритет обработки buttons: 1 -> mark, 2 -> inline
-        println("MESSAGE")
-        /*if (text.length > 4096) {
-            val splitted = text.split("\n")
 
-            var i = 0
-            var reducedText = ""
-
-            while (i in splitted.indices) {
-                while (i in splitted.indices && (reducedText + splitted[i] + "\n").length <= 4096) {
-                    reducedText += splitted[i] + "\n"
-                    i++
-                }
-
-                sendMessage(reducedText, chatId, shielded)
-
-                reducedText = ""
-            }
-
-            return -1
-        }
-
-         */
         val sendMessage = SendMessage()
         sendMessage.chatId = chatId.toString()
         sendMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         sendMessage.parseMode = "MarkdownV2"
         if(markButtons != null) sendMessage.replyMarkup = getReplyMarkup(markButtons, oneTime)
         if(inlineButtons != null) sendMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
-        //GlobalScope.launch (Dispatchers.Default) {
         return GlobalScope.async {
             val id = try {
                 execute(sendMessage).messageId
             } catch (e: Exception) {
-                e.printStackTrace()
-                sendAchtung(chatId)
+                println("#")
+                println("Ошибка при отправке сообщения.")
+                println(e.message)
+                println("#")
                 -100
             }
 
             return@async id
         }.await()
-        //}
     }
     fun getReplyMarkup(allButtons: List<List<String>>, oneTime: Boolean = false): ReplyKeyboardMarkup {
         val markup = ReplyKeyboardMarkup()
@@ -198,7 +146,6 @@ interface Bot {
 
     suspend fun sendPhoto(photo: String, chatId: Long) {
         // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
-        println("PHOTO")
         val sendPhoto = SendPhoto()
         val t = InputFile()
         t.setMedia(File("photoAndDocs\\$photo"))
@@ -207,12 +154,13 @@ interface Bot {
         try {
             execute(sendPhoto)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("#")
+            println("Ошибка при отправке фото из папки.")
+            println(e.message)
+            println("#")
         }
     }
     suspend fun sendPhoto(photo: File, chatId: Long) {
-        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
-        println("PHOTO")
         val sendPhoto = SendPhoto()
         val t = InputFile()
         t.setMedia(photo)
@@ -222,12 +170,14 @@ interface Bot {
         try {
             execute(sendPhoto)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("#")
+            println("Ошибка при отправке фото как файла.")
+            println(e.message)
+            println("#")
         }
     }
 
     suspend fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
-        println("DOCUMENT")
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
         sendDocument.document = InputFile(document, document.name)
@@ -235,8 +185,14 @@ interface Bot {
             if (markdownShielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
 
         sendDocument.parseMode = "MarkdownV2"
-
-        execute(sendDocument)
+        try {
+            execute(sendDocument)
+        } catch (e: Exception) {
+            println("#")
+            println("Ошибка при отправке документа.")
+            println(e.message)
+            println("#")
+        }
     }
 
     suspend fun answerCallbackQuery(id: String) {
