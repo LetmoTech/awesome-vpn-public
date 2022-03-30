@@ -21,11 +21,8 @@ class VpnBot(
     val adminService: AdminService,
     val netmakerAPI: NetmakerAPI
 ) : TelegramLongPollingBot(), Bot {
-    companion object {
-        const val ACHTUNG_MESSAGE = "Ошибка!"
-        const val CHOOSE_BITCOIN_TEXT = "BTC"
-        const val CHOOSE_BITCOIN = "CPM!BTC"
-    }
+
+    var stopBot = false
 
     override fun getBotUsername(): String {
         return "Awesome VPN Bot"
@@ -59,7 +56,8 @@ class VpnBot(
 
     // Распределение юзеров/админов
     private suspend fun processUpdate(update: Update) {
-        //if(!(update.hasMessage() || update.hasCallbackQuery())) return // Обрабатываем только сообщения и кнопки
+
+        //if(!(update.hasMessage() || update.hasCall backQuery())) return // Обрабатываем только сообщения и кнопки
         val userName =
             if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
         val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
@@ -81,9 +79,10 @@ class VpnBot(
                 )
             )
             netmakerAPI.createUser(user.tgId)
+
             startSuspended {
                 sendMessage(
-                    "Создаем Вам криптокошельки.\n" +
+                    "Создаем Вам криптокошельки и уникальные файлы конфигурации VPN.\n" +
                             "Это происходит при регистрации нового пользователя и может занять некоторое время.\n",
                     user.chatId
                 )
@@ -138,6 +137,22 @@ class VpnBot(
                             "Список команд" to "commands"
                         )
                     )
+                }
+                "/startBot" -> {
+                    stopBot = false
+                    sendMessage("Bot is started", admin.chatId)
+                    val allUsers = userService.getAllUsers()
+                    for (usr in allUsers) {
+                        sendMessage("Бот запущен админом.", usr.chatId)
+                    }
+                }
+                "/stopBot" -> {
+                    stopBot = true
+                    sendMessage("Bot is stopped", admin.chatId)
+                    val allUsers = userService.getAllUsers()
+                    for (usr in allUsers) {
+                        sendMessage("Бот остановлен админом.", usr.chatId)
+                    }
                 }
                 "/asUser" -> {
                     admin.asUser = true
@@ -328,6 +343,8 @@ class VpnBot(
                         "/view 'admins|users' - просмотр ников и tgId админов или юзеров'\n" +
                                 "/add 'NAME_ADMIN' - добавить админа по имени'\n" +
                                 "/remove 'NAME_ADMIN' - удалить админа по имени'\n" +
+                                "/startBot - бот обрабатывает запросы'\n" +
+                                "/stopBot - бот обрабатывает запросы'\n" +
                                 "/deleteNet 'ID_USER' - удалить юзера из VPN-базы\n" +
                                 "/createNet 'ID_USER' - добавить юзера в VPN-базу\n" +
                                 "/rebornNet 'ID_USER' - обновить юзера в VPN-базе\n" +
@@ -352,7 +369,6 @@ class VpnBot(
                 }
                 else -> sendMessage("Несуществующая команда или ошибка исполнения.", admin.chatId)
             }
-            println(callbackData)
         }
     }
 
@@ -369,10 +385,6 @@ class VpnBot(
      *
      *
      */
-    val startUserButton = listOf(
-        "Мои криптокошельки" to "start!mycryptowallets",
-        "Пополнить баланс" to "start!paybalance"
-    )
     val startUserMark = listOf( // Стартовое меню по строкам
         listOf("Баланс", "Мои подключения"),
         listOf("Как подключить VPN?"),
@@ -380,8 +392,8 @@ class VpnBot(
     )
 
     suspend fun processUserUpdate(update: Update, user: User) {
+        if(stopBot && !(update.hasMessage() && update.message.text == "/asAdminCum")) return
         if (update.hasMessage()) {
-
             when (update.message.text) {
                 "Меню", "/start" -> {
                     sendMessage(
@@ -536,7 +548,6 @@ class VpnBot(
                     )
                 }
             }
-            println(callbackData)
         }
     }
 

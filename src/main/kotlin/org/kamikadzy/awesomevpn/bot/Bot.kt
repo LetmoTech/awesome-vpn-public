@@ -34,11 +34,15 @@ interface Bot {
         sticker: String,
         chatId: Long
     ) {
+        // Сносит при отправке replyKeyboard
         val sendSticker = SendSticker()
         val str = InputFile()
         str.setMedia(sticker)
         sendSticker.chatId = chatId.toString()
         sendSticker.sticker = str
+        val tmp = ReplyKeyboardRemove()
+        tmp.removeKeyboard = true
+        sendSticker.replyMarkup = tmp
         try {
             execute(sendSticker)
         } catch (e: Exception) {
