@@ -12,11 +12,15 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto
 import org.telegram.telegrambots.meta.api.methods.send.SendSticker
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import java.io.File
 
 interface Bot {
@@ -26,143 +30,97 @@ interface Bot {
     fun execute(sendDocument: SendDocument): Message
     fun execute(sendPhoto: SendPhoto): Message
 
-    suspend fun sendSticker(sticker: String, chatId: Long) {
-        println("STICKER")
+    suspend fun sendSticker(
+        sticker: String,
+        chatId: Long
+    ) {
+        // Сносит при отправке replyKeyboard
         val sendSticker = SendSticker()
-        val str = org.telegram.telegrambots.meta.api.objects.InputFile()
+        val str = InputFile()
         str.setMedia(sticker)
         sendSticker.chatId = chatId.toString()
         sendSticker.sticker = str
+        val tmp = ReplyKeyboardRemove()
+        tmp.removeKeyboard = true
+        sendSticker.replyMarkup = tmp
         try {
             execute(sendSticker)
         } catch (e: Exception) {
-            e.printStackTrace()
-            //Не слать пользователю ахтунг
-            //sendAchtung(chatId)
+            println("#")
+            println("Ошибка при отправке стикера.")
+            println(e.message)
+            println("#")
         }
     }
 
-    suspend fun editMessageText(
+    suspend fun editMessage(
         text: String,
         messageId: Long,
         chatId: Long,
-        shielded: Boolean,
-        buttons: List<Pair<String, String>>? = null
+        inlineButtons: List<Pair<String, String>>? = null,
+        shielded: Boolean = false
     ) {
-        println("EDITING")
-        if (text.length > 4096) {
-            val splitted = text.split("\n")
-
-            var i = 0
-            var reducedText = ""
-
-            while (i in splitted.indices) {
-                while (i in splitted.indices && (reducedText + splitted[i] + "\n").length <= 4096) {
-                    reducedText += splitted[i] + "\n"
-                    i++
-                }
-
-                editMessageText(reducedText, messageId, chatId, shielded)
-
-                reducedText = ""
-            }
-
-            return
-        }
-
-
-        val editMessageText = EditMessageText()
-        editMessageText.messageId = messageId.toInt()
-        editMessageText.chatId = chatId.toString()
-        editMessageText.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
-        editMessageText.parseMode = "MarkdownV2"
-
-        if (buttons != null) {
-            val inlineKeyboardMarkup = InlineKeyboardMarkup()
-            inlineKeyboardMarkup.keyboard = makeKeyboard(buttons)
-            editMessageText.replyMarkup = inlineKeyboardMarkup
-        }
+        val editMessage = EditMessageText()
+        editMessage.messageId = messageId.toInt()
+        editMessage.chatId = chatId.toString()
+        editMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
+        editMessage.parseMode = "MarkdownV2"
+        if(inlineButtons != null) editMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
 
         try {
-            execute(editMessageText)
+            execute(editMessage)
         } catch (e: Exception) {
+            println("#")
+            println("Ошибка при редактировании сообщения.")
             println(e.message)
-            //Не выводить ошибки при редактировании сообщения
-            //e.printStackTrace()
-            //Не слать пользователю ахтунг
-            //sendAchtung(chatId)
-        }
-    }
-
-
-    fun sendAchtung(chatId: Long) {
-        GlobalScope.launch(Dispatchers.Default) {
-            val sendMessage = SendMessage()
-            sendMessage.chatId = chatId.toString()
-            sendMessage.text = VpnBot.ACHTUNG_MESSAGE
-
-            execute(sendMessage)
+            println("#")
         }
     }
 
     suspend fun sendMessage(
         text: String,
         chatId: Long,
+        markButtons : List<List<String>>? = null,
+        inlineButtons: List<Pair<String, String>>? = null,
         shielded: Boolean = false,
-        buttons: List<Pair<String, String>>? = null
+        oneTime: Boolean = false
     ): Int? {
-        println("MESSAGE")
-        if (text.length > 4096) {
-            val splitted = text.split("\n")
-
-            var i = 0
-            var reducedText = ""
-
-            while (i in splitted.indices) {
-                while (i in splitted.indices && (reducedText + splitted[i] + "\n").length <= 4096) {
-                    reducedText += splitted[i] + "\n"
-                    i++
-                }
-
-                sendMessage(reducedText, chatId, shielded)
-
-                reducedText = ""
-            }
-
-            return -1
-        }
-
+        // Приоритет обработки buttons: 1 -> mark, 2 -> inline
 
         val sendMessage = SendMessage()
         sendMessage.chatId = chatId.toString()
         sendMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         sendMessage.parseMode = "MarkdownV2"
-
-        if (buttons != null) {
-            val inlineKeyboardMarkup = InlineKeyboardMarkup()
-            inlineKeyboardMarkup.keyboard = makeKeyboard(buttons)
-            sendMessage.replyMarkup = inlineKeyboardMarkup
-        }
-
-        //GlobalScope.launch (Dispatchers.Default) {
+        if(markButtons != null) sendMessage.replyMarkup = getReplyMarkup(markButtons, oneTime)
+        if(inlineButtons != null) sendMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
         return GlobalScope.async {
             val id = try {
                 execute(sendMessage).messageId
             } catch (e: Exception) {
-                e.printStackTrace()
-                sendAchtung(chatId)
-
-                -1
+                println("#")
+                println("Ошибка при отправке сообщения.")
+                println(e.message)
+                println("#")
+                -100
             }
 
             return@async id
         }.await()
-        //}
+    }
+    fun getReplyMarkup(allButtons: List<List<String>>, oneTime: Boolean = false): ReplyKeyboardMarkup {
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.oneTimeKeyboard = oneTime
+        markup.keyboard = allButtons.map { rowButtons ->
+            val row = KeyboardRow()
+            rowButtons.forEach { rowButton -> row.add(rowButton) }
+            row
+        }
+        return markup
     }
 
-    private fun makeKeyboard(buttonsInfo: List<Pair<String, String>>): List<List<InlineKeyboardButton>> {
+    private fun getReplyInlineKeyboard(buttonsInfo: List<Pair<String, String>>): InlineKeyboardMarkup {
         val keyboard = arrayListOf<List<InlineKeyboardButton>>()
-
         var twoList = arrayListOf<InlineKeyboardButton>()
         for ((name, code) in buttonsInfo) {
             val button = InlineKeyboardButton()
@@ -185,13 +143,13 @@ interface Bot {
         if (twoList.isNotEmpty()) {
             keyboard.add(twoList)
         }
-
-        return keyboard
+        val inlineKeyboard = InlineKeyboardMarkup()
+        inlineKeyboard.keyboard = keyboard
+        return inlineKeyboard
     }
 
     suspend fun sendPhoto(photo: String, chatId: Long) {
         // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
-        println("PHOTO")
         val sendPhoto = SendPhoto()
         val t = InputFile()
         t.setMedia(File("photoAndDocs\\$photo"))
@@ -200,12 +158,13 @@ interface Bot {
         try {
             execute(sendPhoto)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("#")
+            println("Ошибка при отправке фото из папки.")
+            println(e.message)
+            println("#")
         }
     }
     suspend fun sendPhoto(photo: File, chatId: Long) {
-        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
-        println("PHOTO")
         val sendPhoto = SendPhoto()
         val t = InputFile()
         t.setMedia(photo)
@@ -215,13 +174,14 @@ interface Bot {
         try {
             execute(sendPhoto)
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("#")
+            println("Ошибка при отправке фото как файла.")
+            println(e.message)
+            println("#")
         }
     }
 
     suspend fun sendDocument(document: File, text: String, chatId: Long, markdownShielded: Boolean = true) {
-        // Закидывайте все отправляемые фото и документы в папку "photoAndDocs"
-        println("DOCUMENT")
         val sendDocument = SendDocument()
         sendDocument.chatId = chatId.toString()
         sendDocument.document = InputFile(document, document.name)
@@ -229,8 +189,14 @@ interface Bot {
             if (markdownShielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
 
         sendDocument.parseMode = "MarkdownV2"
-
-        execute(sendDocument)
+        try {
+            execute(sendDocument)
+        } catch (e: Exception) {
+            println("#")
+            println("Ошибка при отправке документа.")
+            println(e.message)
+            println("#")
+        }
     }
 
     suspend fun answerCallbackQuery(id: String) {

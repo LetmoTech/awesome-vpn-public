@@ -21,11 +21,8 @@ class VpnBot(
     val adminService: AdminService,
     val netmakerAPI: NetmakerAPI
 ) : TelegramLongPollingBot(), Bot {
-    companion object {
-        const val ACHTUNG_MESSAGE = "Ошибка!"
-        const val CHOOSE_BITCOIN_TEXT = "BTC"
-        const val CHOOSE_BITCOIN = "CPM!BTC"
-    }
+
+    var stopBot = false
 
     override fun getBotUsername(): String {
         return "Awesome VPN Bot"
@@ -59,6 +56,8 @@ class VpnBot(
 
     // Распределение юзеров/админов
     private suspend fun processUpdate(update: Update) {
+
+        //if(!(update.hasMessage() || update.hasCall backQuery())) return // Обрабатываем только сообщения и кнопки
         val userName =
             if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
         val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
@@ -80,17 +79,17 @@ class VpnBot(
                 )
             )
             netmakerAPI.createUser(user.tgId)
+
             startSuspended {
                 sendMessage(
-                    "Создаем Вам криптокошельки.\n" +
+                    "Создаем Вам криптокошельки и уникальные файлы конфигурации VPN.\n" +
                             "Это происходит при регистрации нового пользователя и может занять некоторое время.\n",
-                    user.chatId,
-                    false
+                    user.chatId
                 )
                 newUserTokens(user)
                 sendMessage(
                     "Создание криптокошельков завершено.\n" +
-                            "Добро пожаловать!", user.chatId, false
+                            "Добро пожаловать!", user.chatId
                 )
                 processUserUpdate(update, user)
             }
@@ -111,7 +110,7 @@ class VpnBot(
             val admins = adminService.getAllAdmins()
             for (i in 0 until admins.size) {
                 if (admins[i].chatId != (-1).toLong()) {
-                    startSuspended { sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId, false) }
+                    startSuspended { sendMessage("Registered new admin: " + mbAdmin.name, admins[i].chatId) }
                 }
             }
             // Сохраняем нового админа в базе
@@ -122,21 +121,38 @@ class VpnBot(
     }
 
     /*
-     * Команды
-     * админов
+     *
+     *  Команды
+     *  админов
+     *
      */
     suspend fun processAdminUpdate(update: Update, admin: Admin) {
         if (update.hasMessage()) {
-            val text = update.message
             val splittedMessage = update.message.text.split(" ")
             when (splittedMessage[0]) {
                 "/start" -> {
                     sendSticker("CAACAgIAAxkBAAEEPlFiOmXSUUeV3-o1Na7NngNZ3KeRhwACxwAD-0HCDoWNjoqE3wv6IwQ", admin.chatId)
                     sendMessage(
-                        "Рады тебя видеть, ${admin.name}!", admin.chatId, false, listOf(
+                        "Рады тебя видеть, ${admin.name}!", admin.chatId, null, listOf(
                             "Список команд" to "commands"
                         )
                     )
+                }
+                "/startBot" -> {
+                    stopBot = false
+                    sendMessage("Bot is started", admin.chatId)
+                    val allUsers = userService.getAllUsers()
+                    for (usr in allUsers) {
+                        sendMessage("Бот запущен админом.", usr.chatId)
+                    }
+                }
+                "/stopBot" -> {
+                    stopBot = true
+                    sendMessage("Bot is stopped", admin.chatId)
+                    val allUsers = userService.getAllUsers()
+                    for (usr in allUsers) {
+                        sendMessage("Бот остановлен админом.", usr.chatId)
+                    }
                 }
                 "/asUser" -> {
                     admin.asUser = true
@@ -147,9 +163,90 @@ class VpnBot(
                     )
                     return
                 }
+                "/enable" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: notification 'ID_USER'. You can see tgId in /view users", admin.chatId)
+                        return
+                    }
+                    try {
+                        netmakerAPI.enableUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
+                }
+                "/deleteNet" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: deleteNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
+                        return
+                    }
+                    try {
+                        netmakerAPI.deleteUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
+                }
+                "/createNet" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: createNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
+                        return
+                    }
+                    try {
+                        netmakerAPI.createUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
+                }
+                "/rebornNet" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: rebornNet 'ID_USER'. You can see tgId in /view users", admin.chatId)
+                        return
+                    }
+                    try{
+                        netmakerAPI.deleteUser(splittedMessage[1].toLong())
+                        netmakerAPI.createUser(splittedMessage[1].toLong())
+                        val usr = userService.getUserByTgId(splittedMessage[1].toLong())
+                        if(usr != null) {
+                            sendMessage("Ваши параметры конфигурации обновлены.\nНастройте " +
+                                    "Ваш VPN ещё раз с новыми файлами конфигурации. Их можно найти в 'Мои подключения'", usr.chatId)
+                        }
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
+                }
+                "/disable" -> {
+                    if(splittedMessage.size == 1) {
+                        sendMessage("Usage: notification 'ID_USER'. You can see tgId in /view users", admin.chatId)
+                        return
+                    }
+                    try {
+                        netmakerAPI.disableUser(splittedMessage[1].toLong())
+                        sendMessage("OK", admin.chatId)
+                    } catch(e: Exception) {
+                        sendSticker("CAACAgIAAxkBAAEEUe5iRDmCbpHvjYn1rjhwoLpvUxIMEQAC-g0AApuxEEkyE5lzjWNcTSME", admin.chatId)
+                        sendMessage("NOK\n" + e.message, admin.chatId)
+                    }
+                }
+                "/notification" -> {
+                    if (splittedMessage.size == 1) {
+                        sendMessage("Usage: notification 'TEXT_OF_NOTIFICATION'", admin.chatId)
+                        return
+                    }
+                    val text = "Уведомляем:\n" + splittedMessage.drop(1).joinToString(separator = " ", transform = {it.toString()})
+                    for(usr in userService.getAllUsers()) {
+                        sendMessage(text, usr.chatId, shielded = true)
+                    }
+                }
                 "/view" -> {
                     if (splittedMessage.size != 2) {
-                        sendMessage("Usage: view 'admins|users'", admin.chatId, false)
+                        sendMessage("Usage: view 'admins|users'", admin.chatId)
                         return
                     }
                     if (splittedMessage[1] in listOf("admin", "admins", "adm", "ad")) {
@@ -158,33 +255,33 @@ class VpnBot(
                         for (i in 0 until admins.size) {
                             adminsOut += "`" + admins[i].name + "` `" + admins[i].tgId + "`\n"
                         }
-                        sendMessage(adminsOut, admin.chatId, false)
+                        sendMessage(adminsOut, admin.chatId)
                     } else if (splittedMessage[1] in listOf("user", "users", "usr", "us")) {
                         val users = userService.getAllUsers()
                         var usersOut: String = "Users:\n"
                         for (i in 0 until users.size) {
                             usersOut += "`" + users[i].name + "` `" + users[i].tgId + "`\n"
                         }
-                        sendMessage(usersOut, admin.chatId, false)
+                        sendMessage(usersOut, admin.chatId)
                     } else {
-                        sendMessage("Usage: view 'admins|users'", admin.chatId, false)
+                        sendMessage("Usage: view 'admins|users'", admin.chatId)
                     }
                 }
                 "/add" -> {
                     if (splittedMessage.size != 2) {
-                        sendMessage("Usage: add 'NAME_ADMIN'\nTry again", admin.chatId, false)
+                        sendMessage("Usage: add 'NAME_ADMIN'\nTry again", admin.chatId)
                         return
                     }
                     if (adminService.getAdminByName(splittedMessage[1]) == null) {
                         adminService.saveAdmin(Admin(name = splittedMessage[1], -1, -1))
-                        sendMessage("Admin `${splittedMessage[1]}` added.", admin.chatId, false)
+                        sendMessage("Admin `${splittedMessage[1]}` added.", admin.chatId)
                     } else {
-                        sendMessage("Admin with name `${splittedMessage[1]}` already added.", admin.chatId, false)
+                        sendMessage("Admin with name `${splittedMessage[1]}` already added.", admin.chatId)
                     }
                 }
                 "/ban" -> {
                     if (splittedMessage.size != 2) {
-                        sendMessage("Usage: ban 'ID_USER'", admin.chatId, false)
+                        sendMessage("Usage: ban 'ID_USER'", admin.chatId)
                         return
                     }
                     val banUser = userService.getUserByTgId(splittedMessage[1].toLong())
@@ -192,17 +289,16 @@ class VpnBot(
                         banUser.isBan = true
                         sendMessage(
                             "User `${banUser.name}` with id `${banUser.tgId}` has been baned.",
-                            admin.chatId,
-                            false
+                            admin.chatId
                         )
                         userService.saveUser(banUser)
                     } else {
-                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId, false)
+                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId)
                     }
                 }
                 "/unban" -> {
                     if (splittedMessage.size != 2) {
-                        sendMessage("Usage: unban 'ID_USER'", admin.chatId, false)
+                        sendMessage("Usage: unban 'ID_USER'", admin.chatId)
                         return
                     }
                     val unbanUser = userService.getUserByTgId(splittedMessage[1].toLong())
@@ -210,34 +306,33 @@ class VpnBot(
                         unbanUser.isBan = false
                         sendMessage(
                             "User `${unbanUser.name}` with id `${unbanUser.tgId}` has been unbaned.",
-                            admin.chatId,
-                            false
+                            admin.chatId
                         )
                         userService.saveUser(unbanUser)
                     } else {
-                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId, false)
+                        sendMessage("User with id `${splittedMessage[1]}` not found.", admin.chatId)
                     }
                 }
                 "/remove" -> {
                     if (splittedMessage.size != 2) {
-                        sendMessage("Usage: remove 'NAME_ADMIN'\nTry again", admin.chatId, false)
+                        sendMessage("Usage: remove 'NAME_ADMIN'\nTry again", admin.chatId)
                         return
                     }
                     if (splittedMessage[1] == "kuratz") {
-                        sendMessage("Are you serious?", admin.chatId, false)
+                        sendMessage("Are you serious?", admin.chatId)
                         return
                     }
                     val remAdmin = adminService.getAdminByName(splittedMessage[1])
                     if (remAdmin != null) {
-                        sendMessage("Removed admin: `${remAdmin.name}`", admin.chatId, false)
+                        sendMessage("Removed admin: `${remAdmin.name}`", admin.chatId)
                         if (remAdmin.chatId != (-1).toLong())
-                            sendMessage("You've been removed from admins.", remAdmin.chatId, false)
+                            sendMessage("You've been removed from admins.", remAdmin.chatId)
                         adminService.removeAdmin(remAdmin)
                     } else {
-                        sendMessage("Admin with name `${splittedMessage[1]}` not found.", admin.chatId, false)
+                        sendMessage("Admin with name `${splittedMessage[1]}` not found.", admin.chatId)
                     }
                 }
-                else -> sendAchtung(admin.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", admin.chatId)
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
@@ -248,25 +343,32 @@ class VpnBot(
                         "/view 'admins|users' - просмотр ников и tgId админов или юзеров'\n" +
                                 "/add 'NAME_ADMIN' - добавить админа по имени'\n" +
                                 "/remove 'NAME_ADMIN' - удалить админа по имени'\n" +
+                                "/startBot - бот обрабатывает запросы'\n" +
+                                "/stopBot - бот обрабатывает запросы'\n" +
+                                "/deleteNet 'ID_USER' - удалить юзера из VPN-базы\n" +
+                                "/createNet 'ID_USER' - добавить юзера в VPN-базу\n" +
+                                "/rebornNet 'ID_USER' - обновить юзера в VPN-базе\n" +
                                 "/ban 'ID_USER' - забанить юзера по tgId\n" +
                                 "/unban 'ID_USER' - разбанить юзера по tgId\n" +
+                                "/enable 'ID_USER' - активировать VPN юзера по tgId\n" +
+                                "/disable 'ID_USER' - деактивировать VPN юзера по tgId\n" +
+                                "/notification 'TEXT_OF_NOTIFICATION' - выслать всем юзерам сообщение с текстом\n" +
                                 "/asUser - войти в систему как пользователь\n" +
                                 "/asAdminCum - войти в систему как админ, если в системе уже как пользователь\n",
-                        admin.chatId, false, listOf(
+                        admin.chatId, null, listOf(
                             "Назад" to "start"
                         )
                     )
                 }
                 "start" -> {
                     sendMessage(
-                        "Доброго времени суток, сударь ${admin.name}!", admin.chatId, false, listOf(
+                        "Доброго времени суток, сударь ${admin.name}!", admin.chatId, null, listOf(
                             "Список команд" to "commands"
                         )
                     )
                 }
-                else -> sendAchtung(admin.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", admin.chatId)
             }
-            println(callbackData)
         }
     }
 
@@ -283,28 +385,76 @@ class VpnBot(
      *
      *
      */
-    val startUserButton = listOf(
-        "Баланс" to "start!balance",
-        "Мои криптокошельки" to "start!mycryptowallets",
-        "Пополнить баланс" to "start!paybalance",
-        "Как подключить VPN" to "start!tutorial!1",
-        "Мои подключения" to "start!myconnect"
+    val startUserMark = listOf( // Стартовое меню по строкам
+        listOf("Баланс", "Мои подключения"),
+        listOf("Как подключить VPN?"),
+        listOf("Мои криптокошельки", "Пополнить баланс")
     )
-    suspend fun processUserUpdate(update: Update, user: User) {
-        if (update.hasMessage()) {
-            val text = update.message
-            val splittedMessage = update.message.text.split(" ")
 
-            when (splittedMessage[0]) {
-                "/start" -> {
-                    val rr = sendMessage(
-                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else "!" + "\n",
+    suspend fun processUserUpdate(update: Update, user: User) {
+        if(stopBot && !(update.hasMessage() && update.message.text == "/asAdminCum")) return
+        if (update.hasMessage()) {
+            when (update.message.text) {
+                "Меню", "/start" -> {
+                    sendMessage(
+                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else {"!"} + "\n"
+                                + "Ваша подписка: " + if(user.isActive) "Активна" else {"Не активна"},
                         user.chatId,
-                        false,
-                        startUserButton
+                        startUserMark, oneTime = true
                     )
-                    user.lastMessageType = "start"
-                    if (rr != null) user.lastMessageId = rr.toLong()
+                }
+                "Мои криптокошельки" -> {
+                    sendMessage(
+                        "Ваши криптокошельки:\n\n" +
+                                "BTC:   `${user.tokens[DealSource.BTC]}`\n\n" +
+                                "ETH:   `${user.tokens[DealSource.ETH]}`\n\n" +
+                                "USDT:   `${user.tokens[DealSource.USDT]}`\n\n" +
+                                "TRON:   `${user.tokens[DealSource.TRON]}`\n\n" +
+                                "MONERO:   `${user.tokens[DealSource.MONERO]}`\n",
+                        user.chatId,
+                        listOf(listOf("Меню"))
+                    )
+                }
+                "Пополнить баланс" -> {
+                    sendMessage(
+                        "Вы можете пополнить баланс с карты, нажав на кнопку ниже.\n" +
+                                "Или перевести необходимую сумму на один из ваших криптокошельков.\n" +
+                                "Баланс в телеграм боте пополняется автоматически в течение 10-20 секунд.",
+                        user.chatId,  null, listOf(
+                            "Пополнить баланс" to "https://yoomoney.ru/",
+                            "В меню" to "paybalance!start"
+                        )
+                    )
+                }
+                "Мои подключения" -> {
+                    sendMessage("Ваши личные архив и QR-код для настройки VPN:\n" +
+                            "Для настройки VPN в меню зайдите в 'Как подключить VPN?'", user.chatId,
+                        listOf(listOf("Меню")))
+                    sendDocument(netmakerAPI.getUserConf(user.tgId), "", user.chatId)
+                    sendPhoto(netmakerAPI.getQrCode(user.tgId), user.chatId)
+                }
+                "Баланс" -> {
+                    sendMessage(
+                        "Ваш баланс составляет: `${user.balance}`₽", user.chatId, listOf(listOf("Меню"))
+                    )
+                }
+                "Как подключить VPN?" -> {
+                    val rr = sendMessage(
+                        "${1}/${3}\n" +
+                                "Скачайте приложение \'WireGuard\'.\n" +
+                                "Его можно скачать, перейдя по кнопкам ниже.\n" +
+                                "App Store - для iPhone.\n" +
+                                "Play Маркет - для Android.\n" +
+                                "И для других платформ(Windows, macOS, Linux).",
+                        user.chatId,  listOf(listOf("Меню")), listOf(
+                            "Вперёд" to "tutorial!tutorial!${2}",
+                            "В меню" to "tutorial!start",
+                            "Play Маркет" to "https://play.google.com/store/apps/details?id=com.wireguard.android",
+                            "App Store" to "https://apps.apple.com/us/app/wireguard/id1441195209",
+                            "Для других платформ" to "https://www.wireguard.com/install/"
+                        ), true
+                    )
+                    user.lastMessageId = rr!!.toLong()
                     userService.saveUser(user)
                 }
                 "/asAdminCum" -> {
@@ -319,100 +469,50 @@ class VpnBot(
                     }
                     return
                 }
-                else -> sendAchtung(user.chatId)
+                else -> sendMessage("Несуществующая команда или ошибка исполнения.", user.chatId)
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
             val callbackData = update.callbackQuery.data
             val splittedCallBack = callbackData.split("!")
-            if (splittedCallBack.size == 1) {
-                sendAchtung(user.chatId)
-                return
-            }
             when (splittedCallBack[1]) {
-                "myconnect" -> {
-                    sendMessage("Ваши архив и QR-код для настройки VPN:", user.chatId, false)
-                    sendDocument(netmakerAPI.getUserConf(user.tgId), "", user.chatId)
-                    sendPhoto(netmakerAPI.getQrCode(user.tgId), user.chatId)
-                    val rr = sendMessage(
-                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else "!" + "\n",
-                        user.chatId,
-                        false,
-                        startUserButton
-                    )
-                    user.lastMessageType = "start"
-                    if (rr != null) user.lastMessageId = rr.toLong()
-                    userService.saveUser(user)
-                }
-                "paybalance" -> {
-                    editMessageText(
-                        "Вы можете пополнить баланс с карты, нажав на кнопку ниже.",
-                        user.lastMessageId, user.chatId, false, listOf(
-                            "Пополнить баланс" to "https://yoomoney.ru/",
-                            "Назад" to "paybalance!start"
-                        )
-                    )
-                }
-                "balance" -> {
-                    editMessageText(
-                        "Ваш баланс составляет: `${user.balance}`₽", user.lastMessageId, user.chatId, false, listOf(
-                            "Назад" to "balance!start",
-                        )
-                    )
-                }
-                "mycryptowallets" -> {
-                    editMessageText(
-                        "Ваши криптокошельки:\n\n" +
-                                "BTC:   `${user.tokens[DealSource.BTC]}`\n\n" +
-                                "ETH:   `${user.tokens[DealSource.ETH]}`\n\n" +
-                                "USDT:   `${user.tokens[DealSource.USDT]}`\n\n" +
-                                "TRON:   `${user.tokens[DealSource.TRON]}`\n\n" +
-                                "MONERO:   `${user.tokens[DealSource.MONERO]}`\n",
-                        user.lastMessageId,
-                        user.chatId,
-                        false,
-                        listOf(
-                            "Назад" to "mycryptowallets!start",
-                        )
-                    )
-                }
                 "tutorial" -> {
                     val page = splittedCallBack[2].toInt()
                     val endTutorial = 3
                     when (page) {
                         endTutorial -> {
-                            editMessageText(
+                            editMessage(
                                 "${page}/${endTutorial}\n" +
                                         "Для активации Вашего VPN" +
                                         " нажмите на флажок в приложении и сверните приложение " +
                                         "(главное не закрывать его полностью).\n\n" +
                                         "Вот и всё! Ваш личный VPN настроен, " +
                                         "Вы можете пользоваться любыми приложениями и не волноваться о Вашей безопасности.",
-                                user.lastMessageId, user.chatId, true, listOf(
+                                user.lastMessageId, user.chatId,  listOf(
                                     "Назад" to "tutorial!tutorial!${page - 1}",
                                     "В меню" to "tutorial!start"
-                                )
+                                ), true
                             )
                         }
                         1 -> {
-                            editMessageText(
+                            editMessage(
                                 "${page}/${endTutorial}\n" +
                                         "Скачайте приложение \'WireGuard\'.\n" +
                                         "Его можно скачать, перейдя по кнопкам ниже.\n" +
                                         "App Store - для iPhone.\n" +
                                         "Play Маркет - для Android.\n" +
                                         "И для других платформ(Windows, macOS, Linux).",
-                                user.lastMessageId, user.chatId, true, listOf(
+                                user.lastMessageId, user.chatId,  listOf(
                                     "Вперед" to "tutorial!tutorial!${page + 1}",
                                     "В меню" to "tutorial!start",
                                     "Play Маркет" to "https://play.google.com/store/apps/details?id=com.wireguard.android",
                                     "App Store" to "https://apps.apple.com/us/app/wireguard/id1441195209",
                                     "Для других платформ" to "https://www.wireguard.com/install/"
-                                )
+                                ), true
                             )
                         }
                         2 -> {
-                            editMessageText(
+                            editMessage(
                                 "${page}/${endTutorial}\n" +
                                         "При регистрации вы получили уникальные zip файл и QR-код,\n" +
                                         "они необходимы Вам для настройки VPN.\n" +
@@ -427,38 +527,28 @@ class VpnBot(
                                         "4. Назовите VPN как Вам угодно.\n" +
                                         "5. Если в приложении появилась строка с выбором VPN, значит настройка прошла успешно!\n" +
                                         "Переходите на следующий шаг настройки.",
-                                user.lastMessageId, user.chatId, true, listOf(
+                                user.lastMessageId, user.chatId, listOf(
                                     "Назад" to "tutorial!tutorial!${page - 1}",
                                     "Вперед" to "tutorial!tutorial!${page + 1}",
                                     "В меню" to "tutorial!start"
-                                )
+                                ), true
                             )
                         }
                         else -> {
-                            editMessageText(
-                                "${page}/${endTutorial}\n",
-                                user.lastMessageId, user.chatId, false, listOf(
-                                    "Назад" to "tutorial!tutorial!${page - 1}",
-                                    "Вперед" to "tutorial!tutorial!${page + 1}",
-                                    "В меню" to "tutorial!start"
-                                )
-                            )
+                            // АХТУНГ
                         }
                     }
                 }
                 "start" -> {
-                    editMessageText(
-                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else "!" + "\n",
-                        user.lastMessageId,
+                    sendMessage(
+                        "Здравствуйте" + if (user.name != null) ", " + user.name + "." else {"!"} + "\n" +
+                                "Ваша подписка: " + if(user.isActive) "Активна" else {"Не активна"},
                         user.chatId,
-                        false,
-                        startUserButton
+                        startUserMark, oneTime = true
                     )
                 }
             }
-            println(callbackData)
         }
-
     }
 
     override fun <T : java.io.Serializable, Method : BotApiMethod<T>> execute(method: Method): T = super.execute(method)
