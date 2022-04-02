@@ -3,10 +3,9 @@ package org.kamikadzy.awesomevpn.exchange
 import com.binance.api.client.BinanceApiClientFactory
 import com.binance.api.client.domain.market.CandlestickInterval
 import com.binance.api.client.exception.BinanceApiException
-import org.kamikadzy.awesomevpn.db.user.DealSource
+import org.kamikadzy.awesomevpn.db.user.CryptoCurrencies
 import org.springframework.stereotype.Component
 import java.sql.Timestamp
-
 
 @Component
 class BinanceClient {
@@ -16,10 +15,10 @@ class BinanceClient {
 
     suspend fun main() {
         //getPrice(DealSource.BTC,"RUB")
-        getInvoicePrice(DealSource.BTC,"RUB",1648802427000)
+        getInvoicePrice(CryptoCurrencies.BTC,"RUB",1648802427000)
     }
 
-    suspend fun getLastPrice(asset: DealSource, base: String ) {
+    suspend fun getLastPrice(asset: CryptoCurrencies, base: String ) {
         try {
             val tickerStatistics = client.get24HrPriceStatistics(asset.toString() + base.uppercase())
             println(tickerStatistics.lastPrice)
@@ -29,7 +28,7 @@ class BinanceClient {
         }
 
     }
-    suspend fun getInvoicePrice(asset: DealSource, base: String, timestamp: Long){
+    suspend fun getInvoicePrice(asset: CryptoCurrencies, base: String, timestamp: Long){
         try {
             val symbol = asset.toString() + base.uppercase()
             val candlesticks = client.getCandlestickBars(symbol,CandlestickInterval.ONE_MINUTE,1,timestamp,timestamp+60000)
