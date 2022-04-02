@@ -17,7 +17,6 @@ repositories {
     mavenCentral()
     maven ( "https://jitpack.io")
     maven ("https://mvn.mchv.eu/repository/mchv/")
-
 }
 
 dependencies {
@@ -41,6 +40,7 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("ru.gildor.coroutines:kotlin-coroutines-okhttp:1.0")
+    implementation("com.github.bitcoinj:bitcoinj:master-SNAPSHOT")
 
 
     implementation("com.github.binance-exchange:binance-java-api:master-SNAPSHOT")
