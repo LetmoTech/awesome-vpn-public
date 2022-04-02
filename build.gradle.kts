@@ -15,6 +15,8 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
     mavenCentral()
+    maven ("https://jitpack.io")
+    maven ("https://jcenter.bintray.com/")
 }
 
 dependencies {
@@ -37,6 +39,8 @@ dependencies {
     implementation("ru.gildor.coroutines:kotlin-coroutines-okhttp:1.0")
 
     implementation("io.nayuki:qrcodegen:1.7.0")
+
+    implementation("com.github.bitcoinj:bitcoinj:master-SNAPSHOT")
 }
 
 tasks.withType<KotlinCompile> {
