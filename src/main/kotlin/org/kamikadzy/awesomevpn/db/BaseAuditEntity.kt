@@ -1,4 +1,4 @@
-package ru.agronum.ewcidshipping.model
+package org.kamikadzy.awesomevpn.db
 
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate

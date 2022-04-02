@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
-import ru.agronum.ewcidshipping.model.BaseEntity
+import org.kamikadzy.awesomevpn.db.BaseEntity
 import java.math.BigDecimal
 import java.util.*
 import javax.persistence.*

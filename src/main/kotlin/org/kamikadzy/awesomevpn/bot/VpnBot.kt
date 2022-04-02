@@ -5,6 +5,7 @@ import org.kamikadzy.awesomevpn.db.admin.AdminService
 import org.kamikadzy.awesomevpn.db.user.DealSource
 import org.kamikadzy.awesomevpn.db.user.User
 import org.kamikadzy.awesomevpn.db.user.UserService
+import org.kamikadzy.awesomevpn.domain.crypto.BitcoinAPI
 import org.kamikadzy.awesomevpn.domain.netmaker.NetmakerAPI
 import org.kamikadzy.awesomevpn.utils.startSuspended
 import org.springframework.beans.factory.annotation.Value
@@ -19,7 +20,8 @@ class VpnBot(
     val token: String,
     val userService: UserService,
     val adminService: AdminService,
-    val netmakerAPI: NetmakerAPI
+    val netmakerAPI: NetmakerAPI,
+    val bitcoinAPI: BitcoinAPI
 ) : TelegramLongPollingBot(), Bot {
 
     var stopBot = false
@@ -46,6 +48,7 @@ class VpnBot(
 
     // Создание криптокошельков нового пользователя
     private fun newUserTokens(user: User) {
+
         user.tokens[DealSource.BTC] = "Находится в разработке."
         user.tokens[DealSource.ETH] = "Находится в разработке."
         user.tokens[DealSource.USDT] = "Находится в разработке."

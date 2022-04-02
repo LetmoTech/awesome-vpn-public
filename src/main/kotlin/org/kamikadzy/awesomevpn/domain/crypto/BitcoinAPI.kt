@@ -66,24 +66,26 @@ class BitcoinAPI (
                     it.scriptPubKey.getToAddress(params)
                 }
 
-                println("Addresses ${addresses}")
+                println("Addresses $addresses")
 
                 userService.getAllUsers().forEach { user ->
                     if (Address.fromString(params, user.cryptoWallets[CryptoCurrencies.BTC]) in addresses) {
-                        val delta = tx.outputs.first { it.scriptPubKey.getToAddress(params).toString() == user.address }.value.value
+                        val delta = tx.outputs.first { it.scriptPubKey.getToAddress(params).toString() == user.cryptoWallets[CryptoCurrencies.BTC] }.value.value
 
-                        var text = "Баланс кошелька `${user.address}` пополнен на ${
+                        var text = "Баланс кошелька `${user.cryptoWallets[CryptoCurrencies.BTC]}` пополнен на ${
                             BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
                         }₿."
-                        constants.messageSender?.sendMessage(text, user.tgChatId, true)
+                        //sendMessage(text, user.chatId, true)
 
-                        for (administrator in administratorService.getAllAdministrators()) {
+                        /*for (administrator in administratorService.getAllAdministrators()) {
                             text = "Баланс кошелька пользователя @${user.tgName} `${user.address}` пополнен на ${
                                 BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
                             }₿."
 
                             constants.messageSender?.sendMessage(text, administrator.tgChatId, true)
                         }
+
+                         */
 
 
                         pendingTxs.add(tx.txId.toString())
@@ -102,12 +104,14 @@ class BitcoinAPI (
                     }
 
                     userService.getAllUsers().forEach { user ->
-                        if (Address.fromString(params, user.address) in addresses) {
+                        if (Address.fromString(params, user.cryptoWallets[CryptoCurrencies.BTC]) in addresses) {
                             val delta = tx.outputs.first {
-                                it.scriptPubKey.getToAddress(params).toString() == user.address
+                                it.scriptPubKey.getToAddress(params).toString() == user.cryptoWallets[CryptoCurrencies.BTC]
                             }.value.value
-
-                            userService.changeUserBalance(
+                            val date = tx.updateTime
+                            val time = date.time - (date.time % 60000)
+                            println(time)
+                            /*userService.changeUserBalance(
                                 userId = user.id!!,
                                 delta = delta
                             )
@@ -115,6 +119,7 @@ class BitcoinAPI (
                             Logger.addEntity("Пополнение @${user.tgName} на ${
                                 BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
                             }₿.")
+
 
                             val deposit = Deposit(tx.txId.toString(), delta, System.currentTimeMillis(), userId = user.bhKey)
                             depositService.saveDeposit(deposit)
@@ -141,7 +146,11 @@ class BitcoinAPI (
                                             .setScale(2, RoundingMode.CEILING)
                                     } RUB"
                             constants.messageSender?.sendMessage(text, user.tgChatId, true)
+
+                             */
                         }
+
+
                     }
                 }
 

@@ -65,7 +65,7 @@ interface Bot {
         editMessage.chatId = chatId.toString()
         editMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         editMessage.parseMode = "MarkdownV2"
-        if(inlineButtons != null) editMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
+        if (inlineButtons != null) editMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
 
         try {
             execute(editMessage)
@@ -80,7 +80,7 @@ interface Bot {
     suspend fun sendMessage(
         text: String,
         chatId: Long,
-        markButtons : List<List<String>>? = null,
+        markButtons: List<List<String>>? = null,
         inlineButtons: List<Pair<String, String>>? = null,
         shielded: Boolean = false,
         oneTime: Boolean = false
@@ -91,8 +91,8 @@ interface Bot {
         sendMessage.chatId = chatId.toString()
         sendMessage.text = if (shielded) text.telegramShielded().nonMarkdownShielded() else text.telegramShielded()
         sendMessage.parseMode = "MarkdownV2"
-        if(markButtons != null) sendMessage.replyMarkup = getReplyMarkup(markButtons, oneTime)
-        if(inlineButtons != null) sendMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
+        if (markButtons != null) sendMessage.replyMarkup = getReplyMarkup(markButtons, oneTime)
+        if (inlineButtons != null) sendMessage.replyMarkup = getReplyInlineKeyboard(inlineButtons)
         return GlobalScope.async {
             val id = try {
                 execute(sendMessage).messageId
@@ -107,6 +107,7 @@ interface Bot {
             return@async id
         }.await()
     }
+
     fun getReplyMarkup(allButtons: List<List<String>>, oneTime: Boolean = false): ReplyKeyboardMarkup {
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
@@ -164,6 +165,7 @@ interface Bot {
             println("#")
         }
     }
+
     suspend fun sendPhoto(photo: File, chatId: Long) {
         val sendPhoto = SendPhoto()
         val t = InputFile()

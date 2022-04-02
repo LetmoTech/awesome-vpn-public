@@ -4,7 +4,7 @@ import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
-import ru.agronum.ewcidshipping.model.BaseEntity
+import org.kamikadzy.awesomevpn.db.BaseEntity
 import javax.persistence.Entity
 import javax.persistence.Table
 
