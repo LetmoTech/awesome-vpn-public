@@ -15,6 +15,9 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
     mavenCentral()
+    maven ( "https://jitpack.io")
+    maven ("https://mvn.mchv.eu/repository/mchv/")
+
 }
 
 dependencies {
@@ -37,6 +40,15 @@ dependencies {
     implementation("ru.gildor.coroutines:kotlin-coroutines-okhttp:1.0")
 
     implementation("io.nayuki:qrcodegen:1.7.0")
+
+    implementation("com.github.binance-exchange:binance-java-api:master-SNAPSHOT")
+
+    // import the BOM
+    implementation( platform("it.tdlight:tdlight-java-bom:2.8.1.2"))
+
+    // do not specify the versions on the dependencies below!
+    implementation ("it.tdlight:tdlight-java")
+
 }
 
 tasks.withType<KotlinCompile> {
