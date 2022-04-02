@@ -1,11 +1,10 @@
-package org.kamikadzy.awesomevpn.exchange
+package awesomevpn.exchange
 
+import awesomevpn.db.user.CryptoCurrencies
 import com.binance.api.client.BinanceApiClientFactory
 import com.binance.api.client.domain.market.CandlestickInterval
 import com.binance.api.client.exception.BinanceApiException
-import org.kamikadzy.awesomevpn.db.user.CryptoCurrencies
 import org.springframework.stereotype.Component
-import java.sql.Timestamp
 
 @Component
 class BinanceClient {
