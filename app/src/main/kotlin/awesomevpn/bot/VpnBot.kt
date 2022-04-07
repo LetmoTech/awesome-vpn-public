@@ -1,5 +1,8 @@
 package awesomevpn.bot
 
+import api.ChangerAPI
+import api.RiseXAPI
+import api.auth.LoginData
 import awesomevpn.db.admin.Admin
 import awesomevpn.db.admin.AdminService
 import awesomevpn.db.user.CryptoCurrencies
@@ -60,7 +63,7 @@ class VpnBot(
     // Распределение юзеров/админов
     private suspend fun processUpdate(update: Update) {
 
-        //if(!(update.hasMessage() || update.hasCall backQuery())) return // Обрабатываем только сообщения и кнопки
+        //if(!(update.hasMessage() || update.hasCallbackQuery())) return // Обрабатываем только сообщения и кнопки
         val userName =
             if (update.hasCallbackQuery()) update.callbackQuery.from.userName else update.message.from.userName
         val userId = if (update.hasCallbackQuery()) update.callbackQuery.from.id else update.message.from.id
@@ -460,6 +463,8 @@ class VpnBot(
                     sendMessage(
                         "Ваш баланс составляет: `${user.balance}`₽", user.chatId, listOf(listOf("Меню"))
                     )
+
+
                 }
                 "Как подключить VPN?" -> {
                     val rr = sendMessage(
