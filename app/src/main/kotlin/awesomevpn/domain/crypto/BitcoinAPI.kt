@@ -1,6 +1,6 @@
 package awesomevpn.domain.crypto
 
-import BitcoinBigDecimal
+import awesomevpn.domain.api.BlockCypherAPI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
@@ -12,9 +12,6 @@ import org.bitcoinj.script.Script
 import org.bitcoinj.utils.BriefLogFormatter
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.SendRequest
-import awesomevpn.db.user.CryptoCurrencies
-import awesomevpn.db.user.UserService
-import awesomevpn.domain.api.BlockCypherAPI
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.File
@@ -26,14 +23,11 @@ class BitcoinAPI(
     @Value("\${crypto.bitcoin.seed-phrase}")
     private val seedPhrase: String,
     @Value("\${debug}")
-    private val test: String,
     private val blockCypherAPI: BlockCypherAPI,
-    private val userService: UserService
+    private val usersAddresses: List<String>
 ) : CryptoGateway {
     private val walletAppKit: WalletAppKit
-
-    private final val params: NetworkParameters = MainNetParams.get()
-
+    private val params: NetworkParameters = MainNetParams.get()
     private val pendingTxs = hashSetOf<String>()
 
     init {
@@ -46,124 +40,37 @@ class BitcoinAPI(
 
         walletAppKit = WalletAppKit(params, Script.ScriptType.P2WPKH, null, dirBitcoinj, "vpn")
 
-        if (test != "true") {
-            walletAppKit.setAutoSave(true)
-            walletAppKit.startAsync()
-            walletAppKit.awaitRunning()
+        walletAppKit.setAutoSave(true)
+        walletAppKit.startAsync()
+        walletAppKit.awaitRunning()
 
-            val seed = DeterministicSeed(seedPhrase, null, "", 0)
-            walletAppKit.restoreWalletFromSeed(seed)
+        val seed = DeterministicSeed(seedPhrase, null, "", 0)
+        walletAppKit.restoreWalletFromSeed(seed)
 
-            println("seed: $seed")
-            println("creation time: " + seed.creationTimeSeconds)
-
-
-            walletAppKit.wallet().addCoinsReceivedEventListener { _, tx, _, _ ->
-                println("Wow! We got transaction ${tx.txId}")
-                val addresses = tx.outputs.map {
-                    it.scriptPubKey.getToAddress(params)
-                }
-
-                println("Addresses $addresses")
-
-                userService.getAllUsers().forEach { user ->
-                    if (Address.fromString(params, user.cryptoWallets[CryptoCurrencies.BTC]) in addresses) {
-                        val delta = tx.outputs.first {
-                            it.scriptPubKey.getToAddress(params).toString() == user.cryptoWallets[CryptoCurrencies.BTC]
-                        }.value.value
-
-                        var text = "Баланс кошелька `${user.cryptoWallets[CryptoCurrencies.BTC]}` пополнен на ${
-                            BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
-                        }₿."
-                        //sendMessage(text, user.chatId, true)
-
-                        /*for (administrator in administratorService.getAllAdministrators()) {
-                            text = "Баланс кошелька пользователя @${user.tgName} `${user.address}` пополнен на ${
-                                BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
-                            }₿."
-
-                            constants.messageSender?.sendMessage(text, administrator.tgChatId, true)
-                        }
-
-                         */
-
-
-                        pendingTxs.add(tx.txId.toString())
-                    }
-                }
+        walletAppKit.wallet().addCoinsReceivedEventListener { _, tx, _, _ ->
+            val addresses = tx.outputs.map {
+                it.scriptPubKey.getToAddress(params)
             }
 
-            walletAppKit.wallet().addTransactionConfidenceEventListener { _, tx ->
-                val toDeleteFromPending = hashSetOf<String>()
-
-                if (tx.txId.toString() in pendingTxs && tx.confidence.depthInBlocks >= 1) {
-                    toDeleteFromPending.add(tx.txId.toString())
-
-                    val addresses = tx.outputs.map {
-                        it.scriptPubKey.getToAddress(params)
-                    }
-
-                    userService.getAllUsers().forEach { user ->
-                        if (Address.fromString(params, user.cryptoWallets[CryptoCurrencies.BTC]) in addresses) {
-                            val delta = tx.outputs.first {
-                                it.scriptPubKey.getToAddress(params)
-                                    .toString() == user.cryptoWallets[CryptoCurrencies.BTC]
-                            }.value.value
-                            val date = tx.updateTime
-                            val time = date.time - (date.time % 60000)
-                            println(time)
-                            /*userService.changeUserBalance(
-                                userId = user.id!!,
-                                delta = delta
-                            )
-
-                            Logger.addEntity("Пополнение @${user.tgName} на ${
-                                BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.TEN.pow(8))
-                            }₿.")
-
-
-                            val deposit = Deposit(tx.txId.toString(), delta, System.currentTimeMillis(), userId = user.bhKey)
-                            depositService.saveDeposit(deposit)
-
-                            userService.updateLimitOnCards(user, true)
-                            if (user.balance + delta > constants.getMinimumBalance()) {
-                                userService.enableUser(user)
-                            }
-
-                            val updatedUser = userService.getUserById(user.id!!)
-
-                            val text = "" +
-                                    "\uD83D\uDD25 Ваш кошелек `${updatedUser.address}` пополнен на ${
-                                        BitcoinBigDecimal(delta).divide(
-                                            BitcoinBigDecimal.TEN.pow(
-                                                8
-                                            )
-                                        )
-                                    }₿\n" +
-                                    "\n" +
-                                    "Баланс: ${updatedUser.getBalanceBTC()}\n" +
-                                    "Примерно: ${
-                                        rateUpdater.rate.get().multiply(BigDecimal.ONE.add(constants.percent.divide(BigDecimal.TEN.pow(2)))).multiply(updatedUser.getBalanceInBitcoinBigDecimal())
-                                            .setScale(2, RoundingMode.CEILING)
-                                    } RUB"
-                            constants.messageSender?.sendMessage(text, user.tgChatId, true)
-
-                             */
-                        }
-
-
-                    }
+            usersAddresses.forEach { address ->
+                if (Address.fromString(params, address) in addresses) {
+                    pendingTxs.add(tx.txId.toString())
                 }
-
-                pendingTxs.removeAll(toDeleteFromPending)
             }
+        }
 
-            print(walletAppKit.wallet().watchedAddresses)
-            print(walletAppKit.wallet().unspents)
+        walletAppKit.wallet().addTransactionConfidenceEventListener { _, tx ->
+            val toDeleteFromPending = hashSetOf<String>()
+
+            if (tx.txId.toString() in pendingTxs && tx.confidence.depthInBlocks >= 1) {
+                toDeleteFromPending.add(tx.txId.toString())
+
+            }
+            pendingTxs.removeAll(toDeleteFromPending)
         }
     }
 
-    fun getMasterBalance(): Long {
+    override fun getMasterBalance(): Long {
         return walletAppKit.wallet().balance.value
     }
 
@@ -177,7 +84,7 @@ class BitcoinAPI(
     }
 
     // amount == null => max
-    suspend fun sendFundsOnAddress(address: String, amount: Double?, fee: Long?): String {
+    override suspend fun sendFundsOnAddress(address: String, amount: Double?, fee: Long?): String {
         val receiver = Address.fromString(params, address)
 
         val f = fee ?: blockCypherAPI.getSuggestedFee()
@@ -195,7 +102,7 @@ class BitcoinAPI(
 
             return withContext(Dispatchers.IO) {
                 requestResult.broadcastComplete.get()
-            }.txId.toString()
+            }?.txId.toString()
         } else {
             val sendRequest = SendRequest.to(receiver, Coin.valueOf((amount * 10.0.pow(8)).toLong()))
             sendRequest.feePerKb = Coin.valueOf(f)
@@ -207,16 +114,10 @@ class BitcoinAPI(
                 Preferences.userRoot().getDouble("fee", 0.0) - sendRequestResult.tx.fee.value / 10.0.pow(8)
             )
 
-
-            return sendRequestResult.broadcastComplete.get().txId.toString()
+            return withContext(Dispatchers.IO) {
+                sendRequestResult.broadcastComplete.get()
+            }?.txId.toString()
         }
     }
 
-    fun getWiFPrivateKeys(): List<String> {
-        return walletAppKit.wallet().unspents.map {
-            val eckey = walletAppKit.wallet().findKeyFromAddress(it.scriptPubKey.getToAddress(params))
-
-            eckey.getPrivateKeyAsWiF(params)
-        }
-    }
 }
