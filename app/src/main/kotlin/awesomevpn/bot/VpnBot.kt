@@ -1,11 +1,8 @@
 package awesomevpn.bot
 
-import api.ChangerAPI
-import api.RiseXAPI
-import api.auth.LoginData
 import awesomevpn.db.admin.Admin
 import awesomevpn.db.admin.AdminService
-import awesomevpn.db.user.CryptoCurrencies
+import awesomevpn.db.user.CryptoCurrency
 import awesomevpn.db.user.User
 import awesomevpn.db.user.UserService
 import awesomevpn.domain.crypto.BitcoinAPI
@@ -52,11 +49,11 @@ class VpnBot(
     // Создание криптокошельков нового пользователя
     private fun newUserTokens(user: User) {
 
-        user.cryptoWallets[CryptoCurrencies.BTC] = "Находится в разработке."
-        user.cryptoWallets[CryptoCurrencies.ETH] = "Находится в разработке."
-        user.cryptoWallets[CryptoCurrencies.USDT] = "Находится в разработке."
-        user.cryptoWallets[CryptoCurrencies.TRON] = "Находится в разработке."
-        user.cryptoWallets[CryptoCurrencies.MONERO] = "Находится в разработке."
+        user.cryptoWallets[CryptoCurrency.BTC] = "Находится в разработке."
+        user.cryptoWallets[CryptoCurrency.ETH] = "Находится в разработке."
+        user.cryptoWallets[CryptoCurrency.USDT] = "Находится в разработке."
+        user.cryptoWallets[CryptoCurrency.TRON] = "Находится в разработке."
+        user.cryptoWallets[CryptoCurrency.MONERO] = "Находится в разработке."
         userService.saveUser(user)
     }
 

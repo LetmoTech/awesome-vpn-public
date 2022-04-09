@@ -1,5 +1,6 @@
 package awesomevpn.db.admin
 
+import awesomevpn.db.BaseAuditEntity
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
 import awesomevpn.db.BaseEntity
@@ -23,4 +24,4 @@ data class Admin(
     var chatId: Long,
     var tgId: Long,
     var asUser: Boolean = false
-) : BaseEntity<Long>()
+) : BaseAuditEntity<Long>()

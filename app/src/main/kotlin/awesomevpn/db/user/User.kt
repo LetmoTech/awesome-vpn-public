@@ -1,5 +1,6 @@
 package awesomevpn.db.user
 
+import awesomevpn.db.BaseAuditEntity
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
 import awesomevpn.db.BaseEntity
@@ -18,7 +19,7 @@ interface UserRepository : CrudRepository<User, Long> {
 
     @Modifying
     @Query(nativeQuery = true, value = "UPDATE public.users SET balance = balance + :delta WHERE id = :id")
-    fun changeBalance(@Param("id") id: Long, @Param("delta") delta: Long)
+    fun changeBalance(@Param("id") id: Long, @Param("delta") delta: BigDecimal)
 }
 
 @DynamicInsert
@@ -33,14 +34,15 @@ data class User(
     var isBan: Boolean = false,
     var isRegistered: Boolean = false,
     var isActive: Boolean = false,
+    @Column(precision = 40, scale = 2)
     val balance: BigDecimal = BigDecimal.ZERO,
     @ElementCollection(fetch = FetchType.EAGER)
     @MapKeyColumn(name = "crypto_wallets_key", length = 100000)
     @Column(name = "crypto_wallets_val", length = 100000)
-    var cryptoWallets: MutableMap<CryptoCurrencies, String> = EnumMap(CryptoCurrencies::class.java)
-) : BaseEntity<Long>() {
+    var cryptoWallets: MutableMap<CryptoCurrency, String> = EnumMap(CryptoCurrency::class.java)
+) : BaseAuditEntity<Long>() {
     init {
-        for (cur in CryptoCurrencies.values()) {
+        for (cur in CryptoCurrency.values()) {
             if (cryptoWallets[cur] == null || cryptoWallets[cur]?.isBlank() == true) {
 
             }
@@ -48,6 +50,6 @@ data class User(
     }
 }
 
-enum class CryptoCurrencies {
+enum class CryptoCurrency {
     BTC, ETH, USDT, TRON, MONERO
 }

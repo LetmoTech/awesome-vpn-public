@@ -12,6 +12,7 @@ class BitcoinBigDecimal(s: String) : BigDecimal(s) {
         val ZERO = BitcoinBigDecimal(0L)
         val ONE = BitcoinBigDecimal(1L)
         val TEN = BitcoinBigDecimal(10L)
+        val SATOSHI = BitcoinBigDecimal(10L).pow(8)
     }
 
     override fun toByte(): Byte {

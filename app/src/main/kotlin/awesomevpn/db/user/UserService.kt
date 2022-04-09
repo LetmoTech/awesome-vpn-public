@@ -1,13 +1,24 @@
 package awesomevpn.db.user
 
+import BitcoinBigDecimal
+import awesomevpn.db.cryptoinvoice.CryptoInvoice
+import awesomevpn.domain.Constants
 import unwrap
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import javax.annotation.PostConstruct
 
 @Service
 class UserService(
-    val userRepository: UserRepository
-    ) {
+    private val userRepository: UserRepository,
+    private val constants: Constants
+    ): CryptoEventSupplier {
+
+    @PostConstruct
+    fun postInit() {
+        constants.cryptoEventSupplier = this
+    }
+
     fun saveUser(user: User) = userRepository.save(user)
 
     fun removeUser(user: User) = userRepository.delete(user)
@@ -19,9 +30,9 @@ class UserService(
             name = name
         )
 
-       /* for ((cur, gateway) in constants.cryptoGateways) {
+        for ((cur, gateway) in constants.cryptoGateways) {
             newUser.cryptoWallets[cur] = gateway.getNewAddress()
-        }*/
+        }
 
         return userRepository.save(newUser)
     }
@@ -57,8 +68,15 @@ class UserService(
         }
     }
 
+    override fun getIdsAndAddresses(cryptoCurrency: CryptoCurrency): List<Pair<Long, String>> = userRepository.findAll()
+        .map { it.id!! to it.cryptoWallets[cryptoCurrency]!! }
 
-    fun gotPayment(amount: BigDecimal) {
+    override fun saveBalance(cryptoInvoice: CryptoInvoice) {
+        //TODO: notify balance add
 
+        val user = userRepository.findById(cryptoInvoice.userId).unwrap()
+            ?: throw CryptoEventException("No user found for $cryptoInvoice")
+
+        userRepository.changeBalance(user.id!!, cryptoInvoice.calculateInRub())
     }
 }

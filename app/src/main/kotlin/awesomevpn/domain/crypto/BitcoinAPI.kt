@@ -1,5 +1,11 @@
 package awesomevpn.domain.crypto
 
+import BitcoinBigDecimal
+import awesomevpn.db.cryptoinvoice.CryptoInvoice
+import awesomevpn.db.cryptoinvoice.CryptoInvoiceService
+import awesomevpn.db.cryptoinvoice.CryptoInvoiceStatus
+import awesomevpn.db.user.CryptoCurrency
+import awesomevpn.domain.Constants
 import awesomevpn.domain.api.BlockCypherAPI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,7 +22,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.File
 import java.util.prefs.Preferences
+import javax.annotation.PostConstruct
 import kotlin.math.pow
+
+class BitcoinAPIException(message: String): CryptoGatewayException(message)
 
 @Component
 class BitcoinAPI(
@@ -24,11 +33,17 @@ class BitcoinAPI(
     private val seedPhrase: String,
     @Value("\${debug}")
     private val blockCypherAPI: BlockCypherAPI,
-    private val usersAddresses: List<String>
+    private val constants: Constants,
+    private val cryptoInvoiceService: CryptoInvoiceService
 ) : CryptoGateway {
     private val walletAppKit: WalletAppKit
     private val params: NetworkParameters = MainNetParams.get()
     private val pendingTxs = hashSetOf<String>()
+
+    @PostConstruct
+    fun iinit() {
+        constants.cryptoGateways[CryptoCurrency.BTC] = this
+    }
 
     init {
         val dirBitcoinj = File("static/bitcoinj")
@@ -52,8 +67,23 @@ class BitcoinAPI(
                 it.scriptPubKey.getToAddress(params)
             }
 
-            usersAddresses.forEach { address ->
+            constants.cryptoEventSupplier?.getIdsAndAddresses(CryptoCurrency.BTC)?.forEach { (id, address) ->
                 if (Address.fromString(params, address) in addresses) {
+                    val delta = tx.outputs.first { it.scriptPubKey.getToAddress(params).toString() == address }.value.value
+
+                    cryptoInvoiceService.save(
+                        CryptoInvoice(
+                            userId = id,
+                            amount = BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.SATOSHI),
+                            cryptoCurrency = CryptoCurrency.BTC,
+                            rate = constants.rates[CryptoCurrency.BTC] ?: BitcoinBigDecimal.ZERO,
+                            status = CryptoInvoiceStatus.PENDING,
+                            txId = tx.txId.toString()
+                        )
+                    )
+
+                    //TODO: notify tx detection
+
                     pendingTxs.add(tx.txId.toString())
                 }
             }
@@ -64,6 +94,27 @@ class BitcoinAPI(
 
             if (tx.txId.toString() in pendingTxs && tx.confidence.depthInBlocks >= 1) {
                 toDeleteFromPending.add(tx.txId.toString())
+                val addresses = tx.outputs.map {
+                    it.scriptPubKey.getToAddress(params)
+                }
+
+                constants.cryptoEventSupplier?.getIdsAndAddresses(CryptoCurrency.BTC)?.forEach { (id, address) ->
+                    if (Address.fromString(params, address) in addresses) {
+                        val delta = tx.outputs.first {
+                            it.scriptPubKey.getToAddress(params)
+                                .toString() == address
+                        }.value.value
+
+                        val cryptoInvoice = cryptoInvoiceService.findByTxIdAndUserId(tx.txId.toString(), id) ?:
+                            throw BitcoinAPIException("Unknown invoice for $address, userId: $id, txId: ${tx.txId}")
+
+                        cryptoInvoice.status = CryptoInvoiceStatus.FINISHED
+                        cryptoInvoiceService.save(cryptoInvoice)
+
+                        constants.cryptoEventSupplier?.saveBalance(cryptoInvoice)
+                    }
+                }
+
 
             }
             pendingTxs.removeAll(toDeleteFromPending)
@@ -121,3 +172,4 @@ class BitcoinAPI(
     }
 
 }
+
