@@ -3,7 +3,6 @@ package awesomevpn.db.user
 import awesomevpn.db.BaseAuditEntity
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
-import awesomevpn.db.BaseEntity
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
@@ -40,15 +39,7 @@ data class User(
     @MapKeyColumn(name = "crypto_wallets_key", length = 100000)
     @Column(name = "crypto_wallets_val", length = 100000)
     var cryptoWallets: MutableMap<CryptoCurrency, String> = EnumMap(CryptoCurrency::class.java)
-) : BaseAuditEntity<Long>() {
-    init {
-        for (cur in CryptoCurrency.values()) {
-            if (cryptoWallets[cur] == null || cryptoWallets[cur]?.isBlank() == true) {
-
-            }
-        }
-    }
-}
+) : BaseAuditEntity<Long>()
 
 enum class CryptoCurrency {
     BTC, ETH, USDT, TRON, MONERO

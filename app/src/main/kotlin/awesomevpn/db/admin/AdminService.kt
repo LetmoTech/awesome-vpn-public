@@ -1,7 +1,5 @@
 package awesomevpn.db.admin
 
-import awesomevpn.db.admin.Admin
-import awesomevpn.db.admin.AdminRepository
 import org.springframework.stereotype.Service
 
 @Service

@@ -13,7 +13,7 @@ import javax.persistence.Column
 import javax.persistence.Entity
 
 @Repository
-interface CryptoInvoiceRepository: CrudRepository<CryptoInvoice, Long> {
+interface CryptoInvoiceRepository : CrudRepository<CryptoInvoice, Long> {
     fun findByTxIdAndUserId(txId: String, userId: Long): CryptoInvoice?
 }
 
@@ -28,7 +28,7 @@ data class CryptoInvoice(
     val txId: String,
     val cryptoCurrency: CryptoCurrency,
     var status: CryptoInvoiceStatus
-): BaseAuditEntity<Long>() {
+) : BaseAuditEntity<Long>() {
     fun calculateInRub(): BigDecimal = (rate * amount).setScale(2, RoundingMode.CEILING)
 }
 

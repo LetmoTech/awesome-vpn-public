@@ -9,8 +9,8 @@ import java.util.*
 
 @Component
 class Constants {
-    val rates = Collections.synchronizedMap(EnumMap<CryptoCurrency, BitcoinBigDecimal>(EnumMap(CryptoCurrency::class.java)))
+    val rates =
+        Collections.synchronizedMap(EnumMap<CryptoCurrency, BitcoinBigDecimal>(EnumMap(CryptoCurrency::class.java)))
     val cryptoGateways = Collections.synchronizedMap(hashMapOf<CryptoCurrency, CryptoGateway>())
     var cryptoEventSupplier: CryptoEventSupplier? = null
-
 }

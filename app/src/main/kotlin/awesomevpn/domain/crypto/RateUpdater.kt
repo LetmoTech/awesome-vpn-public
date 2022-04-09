@@ -16,9 +16,9 @@ import toBitcoinBigDecimal
 import java.util.concurrent.TimeUnit
 
 @Component
-class RateUpdater (
+class RateUpdater(
     private var constants: Constants
-    ){
+) {
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -52,7 +52,7 @@ class RateUpdater (
     }
 
     init {
-        GlobalScope.launch (Dispatchers.Default) {
+        GlobalScope.launch(Dispatchers.Default) {
             while (true) {
                 for (asset in CryptoCurrency.values()) {
                     try {
@@ -61,6 +61,7 @@ class RateUpdater (
                             constants.rates[asset] = rate
                         }
                     } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
 

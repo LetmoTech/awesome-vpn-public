@@ -14,10 +14,10 @@ class BinanceClient {
 
     suspend fun main() {
         //getPrice(DealSource.BTC,"RUB")
-        getInvoicePrice(CryptoCurrency.BTC,"RUB",1648802427000)
+        getInvoicePrice(CryptoCurrency.BTC, "RUB", 1648802427000)
     }
 
-    suspend fun getLastPrice(asset: CryptoCurrency, base: String ) {
+    suspend fun getLastPrice(asset: CryptoCurrency, base: String) {
         try {
             val tickerStatistics = client.get24HrPriceStatistics(asset.toString() + base.uppercase())
             println(tickerStatistics.lastPrice)
@@ -27,10 +27,12 @@ class BinanceClient {
         }
 
     }
-    suspend fun getInvoicePrice(asset: CryptoCurrency, base: String, timestamp: Long){
+
+    suspend fun getInvoicePrice(asset: CryptoCurrency, base: String, timestamp: Long) {
         try {
             val symbol = asset.toString() + base.uppercase()
-            val candlesticks = client.getCandlestickBars(symbol,CandlestickInterval.ONE_MINUTE,1,timestamp,timestamp+60000)
+            val candlesticks =
+                client.getCandlestickBars(symbol, CandlestickInterval.ONE_MINUTE, 1, timestamp, timestamp + 60000)
             println(candlesticks[0].high)
         } catch (e: BinanceApiException) {
             println(e.error.code)

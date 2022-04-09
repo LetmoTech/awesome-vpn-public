@@ -25,13 +25,14 @@ import java.util.prefs.Preferences
 import javax.annotation.PostConstruct
 import kotlin.math.pow
 
-class BitcoinAPIException(message: String): CryptoGatewayException(message)
+class BitcoinAPIException(message: String) : CryptoGatewayException(message)
 
 @Component
 class BitcoinAPI(
     @Value("\${crypto.bitcoin.seed-phrase}")
     private val seedPhrase: String,
     @Value("\${debug}")
+    private val debug: String,
     private val blockCypherAPI: BlockCypherAPI,
     private val constants: Constants,
     private val cryptoInvoiceService: CryptoInvoiceService
@@ -55,69 +56,72 @@ class BitcoinAPI(
 
         walletAppKit = WalletAppKit(params, Script.ScriptType.P2WPKH, null, dirBitcoinj, "vpn")
 
-        walletAppKit.setAutoSave(true)
-        walletAppKit.startAsync()
-        walletAppKit.awaitRunning()
+        if (debug == "false") {
+            walletAppKit.setAutoSave(true)
+            walletAppKit.startAsync()
+            walletAppKit.awaitRunning()
 
-        val seed = DeterministicSeed(seedPhrase, null, "", 0)
-        walletAppKit.restoreWalletFromSeed(seed)
+            val seed = DeterministicSeed(seedPhrase, null, "", 0)
+            walletAppKit.restoreWalletFromSeed(seed)
 
-        walletAppKit.wallet().addCoinsReceivedEventListener { _, tx, _, _ ->
-            val addresses = tx.outputs.map {
-                it.scriptPubKey.getToAddress(params)
-            }
-
-            constants.cryptoEventSupplier?.getIdsAndAddresses(CryptoCurrency.BTC)?.forEach { (id, address) ->
-                if (Address.fromString(params, address) in addresses) {
-                    val delta = tx.outputs.first { it.scriptPubKey.getToAddress(params).toString() == address }.value.value
-
-                    cryptoInvoiceService.save(
-                        CryptoInvoice(
-                            userId = id,
-                            amount = BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.SATOSHI),
-                            cryptoCurrency = CryptoCurrency.BTC,
-                            rate = constants.rates[CryptoCurrency.BTC] ?: BitcoinBigDecimal.ZERO,
-                            status = CryptoInvoiceStatus.PENDING,
-                            txId = tx.txId.toString()
-                        )
-                    )
-
-                    //TODO: notify tx detection
-
-                    pendingTxs.add(tx.txId.toString())
-                }
-            }
-        }
-
-        walletAppKit.wallet().addTransactionConfidenceEventListener { _, tx ->
-            val toDeleteFromPending = hashSetOf<String>()
-
-            if (tx.txId.toString() in pendingTxs && tx.confidence.depthInBlocks >= 1) {
-                toDeleteFromPending.add(tx.txId.toString())
+            walletAppKit.wallet().addCoinsReceivedEventListener { _, tx, _, _ ->
                 val addresses = tx.outputs.map {
                     it.scriptPubKey.getToAddress(params)
                 }
 
                 constants.cryptoEventSupplier?.getIdsAndAddresses(CryptoCurrency.BTC)?.forEach { (id, address) ->
                     if (Address.fromString(params, address) in addresses) {
-                        val delta = tx.outputs.first {
-                            it.scriptPubKey.getToAddress(params)
-                                .toString() == address
-                        }.value.value
+                        val delta =
+                            tx.outputs.first { it.scriptPubKey.getToAddress(params).toString() == address }.value.value
 
-                        val cryptoInvoice = cryptoInvoiceService.findByTxIdAndUserId(tx.txId.toString(), id) ?:
-                            throw BitcoinAPIException("Unknown invoice for $address, userId: $id, txId: ${tx.txId}")
+                        cryptoInvoiceService.save(
+                            CryptoInvoice(
+                                userId = id,
+                                amount = BitcoinBigDecimal(delta).divide(BitcoinBigDecimal.SATOSHI),
+                                cryptoCurrency = CryptoCurrency.BTC,
+                                rate = constants.rates[CryptoCurrency.BTC] ?: BitcoinBigDecimal.ZERO,
+                                status = CryptoInvoiceStatus.PENDING,
+                                txId = tx.txId.toString()
+                            )
+                        )
 
-                        cryptoInvoice.status = CryptoInvoiceStatus.FINISHED
-                        cryptoInvoiceService.save(cryptoInvoice)
+                        //TODO: notify tx detection
 
-                        constants.cryptoEventSupplier?.saveBalance(cryptoInvoice)
+                        pendingTxs.add(tx.txId.toString())
                     }
                 }
-
-
             }
-            pendingTxs.removeAll(toDeleteFromPending)
+
+            walletAppKit.wallet().addTransactionConfidenceEventListener { _, tx ->
+                val toDeleteFromPending = hashSetOf<String>()
+
+                if (tx.txId.toString() in pendingTxs && tx.confidence.depthInBlocks >= 1) {
+                    toDeleteFromPending.add(tx.txId.toString())
+                    val addresses = tx.outputs.map {
+                        it.scriptPubKey.getToAddress(params)
+                    }
+
+                    constants.cryptoEventSupplier?.getIdsAndAddresses(CryptoCurrency.BTC)?.forEach { (id, address) ->
+                        if (Address.fromString(params, address) in addresses) {
+                            val delta = tx.outputs.first {
+                                it.scriptPubKey.getToAddress(params)
+                                    .toString() == address
+                            }.value.value
+
+                            val cryptoInvoice = cryptoInvoiceService.findByTxIdAndUserId(tx.txId.toString(), id)
+                                ?: throw BitcoinAPIException("Unknown invoice for $address, userId: $id, txId: ${tx.txId}")
+
+                            cryptoInvoice.status = CryptoInvoiceStatus.FINISHED
+                            cryptoInvoiceService.save(cryptoInvoice)
+
+                            constants.cryptoEventSupplier?.saveBalance(cryptoInvoice)
+                        }
+                    }
+
+
+                }
+                pendingTxs.removeAll(toDeleteFromPending)
+            }
         }
     }
 

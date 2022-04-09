@@ -1,25 +1,23 @@
 package awesomevpn.db.user
 
-import BitcoinBigDecimal
 import awesomevpn.db.cryptoinvoice.CryptoInvoice
 import awesomevpn.domain.Constants
-import unwrap
 import org.springframework.stereotype.Service
-import java.math.BigDecimal
+import unwrap
 import javax.annotation.PostConstruct
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
     private val constants: Constants
-    ): CryptoEventSupplier {
+) : CryptoEventSupplier {
 
     @PostConstruct
     fun postInit() {
         constants.cryptoEventSupplier = this
     }
 
-    fun saveUser(user: User) = userRepository.save(user)
+    fun saveUser(user: User): User = userRepository.save(user)
 
     fun removeUser(user: User) = userRepository.delete(user)
 

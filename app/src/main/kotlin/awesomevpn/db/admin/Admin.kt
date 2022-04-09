@@ -3,7 +3,6 @@ package awesomevpn.db.admin
 import awesomevpn.db.BaseAuditEntity
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
-import awesomevpn.db.BaseEntity
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import javax.persistence.Entity

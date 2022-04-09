@@ -1,5 +1,9 @@
 package awesomevpn.domain.netmaker
 
+import OkHttpUtils
+import QRGenerator
+import awesomevpn.db.user.UserService
+import kassert
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -11,15 +15,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
-import awesomevpn.db.user.UserService
-import OkHttpUtils
-import QRGenerator
-import kassert
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.time.Duration
 import java.util.*
@@ -27,9 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.PostConstruct
 import javax.imageio.ImageIO
 import kotlin.io.path.Path
-import kotlin.io.path.createDirectory
-import kotlin.io.path.exists
-import java.nio.file.FileAlreadyExistsException
 
 class NetmakerAPIException(s: String) : Exception(s)
 
@@ -41,8 +38,10 @@ class NetmakerAPI(
     val apiUrl: String,
     @Value("\${netmaker.api-create-user-url}")
     val apiCreateUserUrl: String,
+    @Value("\${static.working-directory}")
+    val workingDirectory: String,
     val userService: UserService
-    ) {
+) {
     private val httpClient = OkHttpClient.Builder()
         .addNetworkInterceptor(TokenInterceptor())
         .connectTimeout(Duration.ofMinutes(1))
@@ -63,12 +62,14 @@ class NetmakerAPI(
     @PostConstruct
     private fun ensureFolders() {
         try {
-            Files.createDirectory(Path("./static/configs"))
-        } catch (_: FileAlreadyExistsException) { }
+            Files.createDirectory(Path("$workingDirectory/configs"))
+        } catch (_: FileAlreadyExistsException) {
+        }
 
         try {
-            Files.createDirectory(Path("./static/qrs"))
-        } catch (_: FileAlreadyExistsException) { }
+            Files.createDirectory(Path("$workingDirectory/qrs"))
+        } catch (_: FileAlreadyExistsException) {
+        }
     }
 
     private suspend fun getUserNamesList(): List<String> {
@@ -188,7 +189,7 @@ class NetmakerAPI(
     }
 
     suspend fun getUserConf(tgId: Long): File {
-        val file = File("configs/${tgId}.conf")
+        val file = File("$workingDirectory/configs/${tgId}.conf")
 
         if (!file.exists()) {
             withContext(Dispatchers.IO) { file.createNewFile() }
@@ -237,7 +238,7 @@ class NetmakerAPI(
     }
 
     suspend fun getQrCode(tgId: Long): File {
-        val file = File("qrs/${tgId}.png")
+        val file = File("$workingDirectory/qrs/${tgId}.png")
 
         if (!file.exists()) {
             val config = getUserConf(tgId)

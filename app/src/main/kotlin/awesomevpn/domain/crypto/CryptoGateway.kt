@@ -6,4 +6,4 @@ interface CryptoGateway {
     suspend fun sendFundsOnAddress(address: String, amount: Double?, fee: Long?): String
 }
 
-open class CryptoGatewayException(message: String): Exception(message)
+open class CryptoGatewayException(message: String) : Exception(message)

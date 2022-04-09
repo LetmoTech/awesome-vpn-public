@@ -8,4 +8,4 @@ interface CryptoEventSupplier {
     fun saveBalance(cryptoInvoice: CryptoInvoice)
 }
 
-class CryptoEventException(message: String): Exception(message)
+class CryptoEventException(message: String) : Exception(message)

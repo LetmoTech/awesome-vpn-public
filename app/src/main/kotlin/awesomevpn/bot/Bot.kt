@@ -3,7 +3,6 @@ package awesomevpn.bot
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import nonMarkdownShielded
-import telegramShielded
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
@@ -18,6 +17,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
+import telegramShielded
 import java.io.File
 
 interface Bot {

@@ -7,12 +7,12 @@ import awesomevpn.db.user.User
 import awesomevpn.db.user.UserService
 import awesomevpn.domain.crypto.BitcoinAPI
 import awesomevpn.domain.netmaker.NetmakerAPI
-import startSuspended
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
+import startSuspended
 
 @Component
 class VpnBot(
@@ -431,7 +431,8 @@ class VpnBot(
                 }
                 "Мои криптокошельки" -> {
                     sendMessage(
-                        "Ваши криптокошельки:\n\n" + user.cryptoWallets.toList().joinToString ("\n") { "${it.first}: `${it.second}`" },
+                        "Ваши криптокошельки:\n\n" + user.cryptoWallets.toList()
+                            .joinToString("\n") { "${it.first}: `${it.second}`" },
                         user.chatId,
                         listOf(listOf("Меню"))
                     )
