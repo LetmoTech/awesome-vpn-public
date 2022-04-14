@@ -9,12 +9,11 @@ job("Build") {
         depth = UNLIMITED_DEPTH
     }
     
-    container(displayName = "Build environment", image = "ubuntu") {
+    container(displayName = "Build environment", image = "openjdk:17") {
         shellScript {
             interpreter = "/bin/bash"
             content = """
                     cd /mnt/space/work/awesome-vpn
-                    apt-get install git openjdk-17-jdk -y
                     git submodule --init --recursive
                     ./gradlew build
                 """
