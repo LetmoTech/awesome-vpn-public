@@ -20,8 +20,7 @@ class VpnBot(
     val token: String,
     val userService: UserService,
     val adminService: AdminService,
-    val netmakerAPI: NetmakerAPI,
-    val bitcoinAPI: BitcoinAPI
+    val netmakerAPI: NetmakerAPI
 ) : TelegramLongPollingBot(), Bot {
 
     var stopBot = false
