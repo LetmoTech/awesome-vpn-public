@@ -14,8 +14,11 @@ job("Build") {
             interpreter = "/bin/bash"
             content = """
                     cd /mnt/space/work/awesome-vpn
-                    git submodule --init --recursive
-                    ./gradlew build
+                    microdnf install git
+                    git submodule init
+                    git submodule update --init --recursive
+                    ./gradlew
+                    gradle :build
                 """
         }
     }
