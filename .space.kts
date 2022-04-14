@@ -5,7 +5,7 @@
 */
 
 job("Build") {
-    git("risex-api")
+    git("RisexAPI")
 
     gradlew("openjdk:17", "build")
 }
