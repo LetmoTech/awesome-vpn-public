@@ -9,11 +9,12 @@ job("Build") {
         depth = UNLIMITED_DEPTH
     }
     
-    container(displayName = "Say Hello", image = "ubuntu") {
+    container(displayName = "Build environment", image = "ubuntu") {
         shellScript {
             interpreter = "/bin/bash"
             content = """
-                    cd /mnt/space/work/main-repo
+                    cd /mnt/space/work/awesome-vpn
+                    sudo apt-get install git openjdk-17-jdk -y
                     git submodule --init --recursive
                     ./gradlew build
                 """
