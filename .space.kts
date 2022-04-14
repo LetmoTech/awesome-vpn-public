@@ -5,5 +5,7 @@
 */
 
 job("Build") {
+    git("risex-api")
+
     gradlew("openjdk:17", "build")
 }
