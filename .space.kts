@@ -5,7 +5,18 @@
 */
 
 job("Build") {
-    git("RisexAPI")
-
-    gradlew("openjdk:17", "build")
+    git {
+        depth = UNLIMITED_DEPTH
+    }
+    
+    container(displayName = "Say Hello", image = "ubuntu") {
+        shellScript {
+            interpreter = "/bin/bash"
+            content = """
+                    cd /mnt/space/work/main-repo
+                    git submodule --init --recursive
+                    ./gradlew build
+                """
+        }
+    }
 }
