@@ -1,0 +1,3 @@
+[submodule "RisexAPIVPN"]
+	path = RisexAPI
+	url = https://git.jetbrains.space/stpeterguard/vpn/RisexAPI.git
