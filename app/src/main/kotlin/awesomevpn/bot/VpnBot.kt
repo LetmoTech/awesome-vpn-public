@@ -5,7 +5,6 @@ import awesomevpn.db.admin.AdminService
 import awesomevpn.db.user.CryptoCurrency
 import awesomevpn.db.user.User
 import awesomevpn.db.user.UserService
-import awesomevpn.domain.crypto.BitcoinAPI
 import awesomevpn.domain.netmaker.NetmakerAPI
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -39,7 +38,9 @@ class VpnBot(
     @Synchronized
     override fun onUpdateReceived(update: Update) {
         try {
-            startSuspended { processUpdate(update) }
+            startSuspended {
+                processUpdate(update)
+            }
         } catch (e: Exception) {
             println("Пропуск хода.")
         }
@@ -73,15 +74,8 @@ class VpnBot(
         if (admin != null && !admin.asUser) {
             startSuspended { processAdminUpdate(update, admin) }
         } else if (user == null) {
-            user = userService.saveUser(
-                User(
-                    name = userName,
-                    chatId = userChatId,
-                    tgId = userId
-                )
-            )
+            user = userService.createUser(name = userName, chatId = userChatId, tgId = userId)
             netmakerAPI.createUser(user.tgId)
-
             startSuspended {
                 sendMessage(
                     "Создаем Вам криптокошельки и уникальные файлы конфигурации VPN.\n" +
@@ -91,7 +85,7 @@ class VpnBot(
                 newUserTokens(user)
                 sendMessage(
                     "Создание криптокошельков завершено.\n" +
-                            "Добро пожаловать!", user.chatId
+                            "Добро пожаловать!", user.chatId, markButtons = startUserMark
                 )
                 processUserUpdate(update, user)
             }
@@ -105,7 +99,7 @@ class VpnBot(
 
     //Фиксируем id нового админа
     private fun updateNewAdmin(user: User?) {
-        if (user == null || user.name == null) return // эту строку не трогать, я сам не уверен как она работает...
+        if (user?.name == null) return
         val mbAdmin = adminService.getAdminByName(user.name!!)
         if (mbAdmin != null && mbAdmin.tgId == (-1).toLong() && mbAdmin.chatId == (-1).toLong()) {
             // Сообщаем о регистрации нового админа существующим админам
@@ -260,7 +254,7 @@ class VpnBot(
                         return
                     }
                     val text = "Уведомляем:\n" + splittedMessage.drop(1)
-                        .joinToString(separator = " ", transform = { it.toString() })
+                        .joinToString(separator = " ", transform = { it })
                     for (usr in userService.getAllUsers()) {
                         sendMessage(text, usr.chatId, shielded = true)
                     }
@@ -272,14 +266,14 @@ class VpnBot(
                     }
                     if (splittedMessage[1] in listOf("admin", "admins", "adm", "ad")) {
                         val admins = adminService.getAllAdmins()
-                        var adminsOut: String = "Admins:\n"
+                        var adminsOut = "Admins:\n"
                         for (i in 0 until admins.size) {
                             adminsOut += "`" + admins[i].name + "` `" + admins[i].tgId + "`\n"
                         }
                         sendMessage(adminsOut, admin.chatId)
                     } else if (splittedMessage[1] in listOf("user", "users", "usr", "us")) {
                         val users = userService.getAllUsers()
-                        var usersOut: String = "Users:\n"
+                        var usersOut = "Users:\n"
                         for (i in 0 until users.size) {
                             usersOut += "`" + users[i].name + "` `" + users[i].tgId + "`\n"
                         }
@@ -357,8 +351,7 @@ class VpnBot(
             }
         } else if (update.hasCallbackQuery()) {
             answerCallbackQuery(update.callbackQuery.id)
-            val callbackData = update.callbackQuery.data
-            when (callbackData) {
+            when (update.callbackQuery.data) {
                 "commands" -> {
                     sendMessage(
                         "/view 'admins|users' - просмотр ников и tgId админов или юзеров'\n" +
@@ -406,7 +399,7 @@ class VpnBot(
      *
      *
      */
-    val startUserMark = listOf( // Стартовое меню по строкам
+    val startUserMark = listOf( // Стартовое меню по-строчно
         listOf("Баланс", "Мои подключения"),
         listOf("Как подключить VPN?"),
         listOf("Мои криптокошельки", "Пополнить баланс")
@@ -420,8 +413,8 @@ class VpnBot(
                     sendMessage(
                         "Здравствуйте" + if (user.name != null) ", " + user.name + "." else {
                             "!"
-                        } + "\n"
-                                + "Ваша подписка: " + if (user.isActive) "Активна" else {
+                        } + "\n" +
+                                "Ваша подписка: " + if (user.isActive) "Активна" else {
                             "Не активна"
                         },
                         user.chatId,
