@@ -20,7 +20,17 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import telegramShielded
 import java.io.File
 
-interface Bot {
+interface MessageSender {
+    suspend fun sendMessage( text: String,
+                     chatId: Long,
+                     markButtons: List<List<String>>? = null,
+                     inlineButtons: List<Pair<String, String>>? = null,
+                     shielded: Boolean = false,
+                     oneTime: Boolean = false
+    ): Int?
+}
+
+interface Bot: MessageSender {
     fun <T : java.io.Serializable, Method : BotApiMethod<T>> execute(method: Method): T
 
     fun execute(sendSticker: SendSticker): Message
@@ -74,13 +84,13 @@ interface Bot {
         }
     }
 
-    suspend fun sendMessage(
+    override suspend fun sendMessage(
         text: String,
         chatId: Long,
-        markButtons: List<List<String>>? = null,
-        inlineButtons: List<Pair<String, String>>? = null,
-        shielded: Boolean = false,
-        oneTime: Boolean = false
+        markButtons: List<List<String>>?,
+        inlineButtons: List<Pair<String, String>>?,
+        shielded: Boolean,
+        oneTime: Boolean
     ): Int? {
         // Приоритет обработки buttons: 1 -> mark, 2 -> inline
 

@@ -3,6 +3,7 @@ package awesomevpn.domain.netmaker
 import OkHttpUtils
 import QRGenerator
 import awesomevpn.db.user.UserService
+import awesomevpn.domain.Constants
 import kassert
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -28,6 +29,13 @@ import javax.annotation.PostConstruct
 import javax.imageio.ImageIO
 import kotlin.io.path.Path
 
+interface VPNInteractor {
+    suspend fun enableUser(userId: Long): String
+    suspend fun disableUser(userId: Long): String
+    suspend fun createUser(userId: Long)
+    suspend fun deleteUser(userId: Long)
+}
+
 class NetmakerAPIException(s: String) : Exception(s)
 
 @Component
@@ -40,8 +48,9 @@ class NetmakerAPI(
     val apiCreateUserUrl: String,
     @Value("\${static.working-directory}")
     val workingDirectory: String,
-    val userService: UserService
-) {
+    val userService: UserService,
+    val constants: Constants
+): VPNInteractor {
     private val httpClient = OkHttpClient.Builder()
         .addNetworkInterceptor(TokenInterceptor())
         .connectTimeout(Duration.ofMinutes(1))
@@ -61,6 +70,8 @@ class NetmakerAPI(
 
     @PostConstruct
     private fun ensureFolders() {
+        constants.vpnInteractor = this
+
         try {
             Files.createDirectory(Path("$workingDirectory/configs"))
         } catch (_: FileAlreadyExistsException) {
@@ -99,37 +110,31 @@ class NetmakerAPI(
         return userNames
     }
 
-    suspend fun deleteUser(tgId: Long) {
+    override suspend fun deleteUser(userId: Long) {
         val createRequest = Request.Builder()
-            .url("${apiUrl}/vpn/${tgId}")
+            .url("${apiUrl}/vpn/${userId}")
             .delete("".toRequestBody())
             .build()
 
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
-        userService.setRegisteredById(tgId, false)
+        userService.setRegisteredById(userId, false)
 
-        if (File("configs/$tgId.conf").exists()) {
+        if (File("configs/$userId.conf").exists()) {
             withContext(Dispatchers.IO) {
-                File("configs/$tgId.conf").delete()
+                File("configs/$userId.conf").delete()
             }
         }
 
-        if (File("qrs/$tgId.png").exists()) {
+        if (File("qrs/$userId.png").exists()) {
             withContext(Dispatchers.IO) {
-                File("qrs/$tgId.png").delete()
+                File("qrs/$userId.png").delete()
             }
         }
     }
 
-    suspend fun enableUser(tgId: Long) {
-        val json = JSONObject(changeUserValue(prevName = tgId.toString(), enabled = true))
-        userService.setActiveById(tgId, json.getBoolean("enabled"))
-    }
+    override suspend fun enableUser(userId: Long) = changeUserValue(prevName = userId.toString(), enabled = true)
 
-    suspend fun disableUser(tgId: Long) {
-        val json = JSONObject(changeUserValue(prevName = tgId.toString(), enabled = false))
-        userService.setActiveById(tgId, json.getBoolean("enabled"))
-    }
+    override suspend fun disableUser(userId: Long) = changeUserValue(prevName = userId.toString(), enabled = false)
 
     private suspend fun changeUserValue(
         prevName: String,
@@ -153,8 +158,8 @@ class NetmakerAPI(
         OkHttpUtils.makeAsyncRequest(httpClient, createRequest) ?: throw NetmakerAPIException("Bad code")
     }
 
-    suspend fun createUser(tgId: Long) {
-        kassert(!(userService.getUserByTgId(tgId)?.isRegistered ?: false), NetmakerAPIException("Already registered"))
+    override suspend fun createUser(userId: Long) {
+        kassert(!(userService.getUserByTgId(userId)?.isRegistered ?: false), NetmakerAPIException("Already registered"))
 
         synchronized(requestsQueue) {
             requestsQueue.add {
@@ -163,7 +168,7 @@ class NetmakerAPI(
                 val usersAfter = getUserNamesList().toSet()
                 val userName = (usersAfter - usersBefore).first()
 
-                changeUserValue(userName, tgId.toString())
+                changeUserValue(userName, userId.toString())
             }
         }
 
@@ -177,7 +182,7 @@ class NetmakerAPI(
                             requestsQueue.removeFirst()
                         }.invoke()
 
-                        userService.setRegisteredById(tgId, true)
+                        userService.setRegisteredById(userId, true)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

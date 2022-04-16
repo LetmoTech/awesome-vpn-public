@@ -5,7 +5,6 @@ import awesomevpn.db.admin.AdminService
 import awesomevpn.db.user.CryptoCurrency
 import awesomevpn.db.user.User
 import awesomevpn.db.user.UserService
-import awesomevpn.domain.crypto.BitcoinAPI
 import awesomevpn.domain.netmaker.NetmakerAPI
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -48,7 +47,7 @@ class VpnBot(
     // Создание криптокошельков нового пользователя
     private fun newUserTokens(user: User) {
 
-        user.cryptoWallets[CryptoCurrency.BTC] = "Находится в разработке."
+        //user.cryptoWallets[CryptoCurrency.BTC] = "Находится в разработке."
         user.cryptoWallets[CryptoCurrency.ETH] = "Находится в разработке."
         user.cryptoWallets[CryptoCurrency.USDT] = "Находится в разработке."
         user.cryptoWallets[CryptoCurrency.TRON] = "Находится в разработке."
@@ -171,7 +170,7 @@ class VpnBot(
                         return
                     }
                     try {
-                        netmakerAPI.enableUser(splittedMessage[1].toLong())
+                        userService.enableUser(splittedMessage[1].toLong())
                         sendMessage("OK", admin.chatId)
                     } catch (e: Exception) {
                         sendSticker(
@@ -244,7 +243,7 @@ class VpnBot(
                         return
                     }
                     try {
-                        netmakerAPI.disableUser(splittedMessage[1].toLong())
+                        userService.disableUser(splittedMessage[1].toLong())
                         sendMessage("OK", admin.chatId)
                     } catch (e: Exception) {
                         sendSticker(
@@ -260,7 +259,7 @@ class VpnBot(
                         return
                     }
                     val text = "Уведомляем:\n" + splittedMessage.drop(1)
-                        .joinToString(separator = " ", transform = { it.toString() })
+                        .joinToString(separator = " ", transform = { it })
                     for (usr in userService.getAllUsers()) {
                         sendMessage(text, usr.chatId, shielded = true)
                     }
@@ -272,14 +271,14 @@ class VpnBot(
                     }
                     if (splittedMessage[1] in listOf("admin", "admins", "adm", "ad")) {
                         val admins = adminService.getAllAdmins()
-                        var adminsOut: String = "Admins:\n"
+                        var adminsOut = "Admins:\n"
                         for (i in 0 until admins.size) {
                             adminsOut += "`" + admins[i].name + "` `" + admins[i].tgId + "`\n"
                         }
                         sendMessage(adminsOut, admin.chatId)
                     } else if (splittedMessage[1] in listOf("user", "users", "usr", "us")) {
                         val users = userService.getAllUsers()
-                        var usersOut: String = "Users:\n"
+                        var usersOut = "Users:\n"
                         for (i in 0 until users.size) {
                             usersOut += "`" + users[i].name + "` `" + users[i].tgId + "`\n"
                         }

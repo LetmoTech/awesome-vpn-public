@@ -9,6 +9,7 @@ import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.*
 import javax.persistence.*
 
@@ -33,8 +34,9 @@ data class User(
     var isBan: Boolean = false,
     var isRegistered: Boolean = false,
     var isActive: Boolean = false,
+    var subscriptionStart: LocalDateTime = LocalDateTime.MIN,
     @Column(precision = 40, scale = 2)
-    val balance: BigDecimal = BigDecimal.ZERO,
+    var balance: BigDecimal = BigDecimal.ZERO,
     @ElementCollection(fetch = FetchType.EAGER)
     @MapKeyColumn(name = "crypto_wallets_key", length = 100000)
     @Column(name = "crypto_wallets_val", length = 100000)
