@@ -18,9 +18,9 @@ class Constants {
     val cryptoGateways = Collections.synchronizedMap(hashMapOf<CryptoCurrency, CryptoGateway>())
     var cryptoEventSupplier: CryptoEventSupplier? = null
 
-    var cost: BigDecimal = Preferences.userRoot().get("costs", "500.0").toBigDecimal()
+    var cost: BigDecimal = Preferences.userRoot().get("vpn_costs", "500.0").toBigDecimal()
         set(value) {
-            Preferences.userRoot().put("costs", value.toString())
+            Preferences.userRoot().put("vpn_costs", value.toString())
             field = value
         }
 
